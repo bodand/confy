@@ -1,0 +1,110 @@
+= confy, A confy projekt dokumentációja
+:title-separator: ,
+:author: Bodor András
+:email: bodand@pm.me
+:appendix-caption: Függelék
+:example-caption: Példa
+:figure-caption: Ábra
+:listing-caption: Listázás
+:table-caption: Táblázat
+:lang: hu
+:doctype: book
+:media: screen
+:chapter-signifier:
+:sectnums:
+:toc:
+:toc-title: Tartalomjegyzék
+:cxx: C++
+:source-highlighter: pygments
+:pygments-style: perldoc
+:pdf-fontsdir: {docdir}/fonts
+:pdf-themesdir: {docdir}
+:pdf-theme: plex.yml
+
+== Specifikáció
+
+[abstract]
+A `confy` program az ajánlott feladat ötletek közül a "`Konfiguráció beolvasó`". +
+A project egy konfiguráció olvasó program, amely--a feladat előírásai szerint--egy osztály segítségével valósítja meg a feladatot.
+Képes több különböző típusú objektum lekérdezésére, a felhasználó{wj}footnote:[itt: az osztályt használó programozó] által kért típusban.
+A használt fájlformátum egy sor orientált részhalmaza a Java properties fájlformátumának.
+
+=== Funkcionalitás
+
+A `confy` program képes egy megadott konfigurációs fájl beolvasására, és az ebben szereplő adatok kezelésére.
+A `confy` futtatható fájl mellett egy, a konfigurációs programot implementáló osztály is elérhető, programozói oldalról, akár más programokból való használatra.
+
+Az adatok, és így a beolvasott konfigurációs fájl, nem módosíthatóak se a `confy` program használatával, se a más programoknak biztosított osztályból.
+Új érték szintén nem szúrható be, és létező érték sem törölhető.
+
+==== A könyvtár osztály
+
+A tárolt adatokat lehetséges sztringként illetve egy specifikus típusként lekérdezni, ez utóbbit elmenti az osztály, így az elsőt követő további lekérdezések már konstans időben lehetségesek arra a típusra.{wj}footnote:[A működés hasonlatos a Tcl nyelvbeli Tcl_Obj implementációjának, mely alapvetően sztringként tárolja az értéket, de más típusokként való használat esetén eltárolja a kiszámolt értéket. Ilyenkor két típusú értéke van egy objektumnak, amíg az egyik értéket nem változtatják meg; ilyenkor érvénytelenedik a másik, és így újra számolandó. A mi konfigurációs fájl adataink nem mutálhatóak, így a cache-et soha nem kell érvényteleníteni.]
+Minden nem tárolt típusú típuskonverziós lekérdezés felülírja az előző mentést, és így csak a legutolsó típusú érték érhető el konstans időben.
+
+A típuskonverzió a felhasználó (programozó) által megadható módon történik.
+A fundamentális típusokra és az `std::string`, `std::string_view`, és `const char*` típusra rendelkezik a program beépített formázókkal, ezek nem definiálhatóak felül.
+Ha nem definiált formázó egy adott típushoz a lekérdezésének forrásbeli pillanatában, akkor az általános `std::istream&`-re definiált `operator>>`-t használja a rendszer.
+Amennyiben ez sem létezik, a program nem fordul le.
+
+==== A futtatható program
+
+A használt nyelv angol.
+
+A `confy` program két, parancssorban futó, de különböző felülettel hívható meg: parancssoros és interaktív üzemmódban.
+
+===== Parancssoros üzemmód
+
+Ilyenkor a program bemenetei paraméterként kerülnek átadásra; az első paraméter a konfigurációs file, második és utána szereplő paraméterek pedig a lekérdezendő kulcsok a konfigurációban.
+A program kimenete pedig--helyes paraméterek esetén--a soronként megfelelő kimenetek, a lekérdezések sorrendjében.
+
+Ha a konfigurációs fájl nem létezik, vagy hibás formátummal rendelkezik, a program hibaüzenet mellett `2`-es hibakóddal tér vissza az operációs rendszernek.
+Amennyiben a lekérdezett kulcs nem létezik a hozzá tartozó sor üres, csupán a sortörés karaktert tartalmazza.
+
+===== Interaktív üzemmód
+
+Ha nem szerepelnek egyáltalán, vagy csak a konfigurációs fájl szerepel a program paraméterlistáján, akkor interaktív módban indul el.
+Ilyenkor, a következők történnek:
+
+* Ha nem ismerjük a bemeneti konfigurációs fájlt, ezt egy rövid üzenet kiírása mellett bekérjük a felhasználótól.
+* Ha létezik a fájl, megnyitjuk, ha nem, vagy hibás formátumú, hibaüzenet mellett a `1`-es hibával kilépünk.
+* Elkezdünk a felhasználótól soronként bekérni kulcsokat, melyekre kiváncsi a konfigurációból, majd--ha létezik a fájlban--kiírjuk azok értékét.
+* Amint egy üres sor bemenettel találkozunk, kilépünk.
+
+=== Visszatérési értékek
+
+A `confy` programtól elvárjuk, hogy különböző esetekben különböző értékekkel térjen vissza a hívó környezetnek.
+Ezen értékek a következők lehetnek:
+
+* `0`, ha sikeres lefutás történt; vagy
+* `1`, ha futás közben a felhasználó hibás adatot adott meg, pl. interaktív üzemmódban adott meg nem létező fájlt olvasásra; vagy
+* `2`, ha parancssoros paraméterként átadott paraméterek között szerepel hibás adat, pl. bemeneti konfigurációs fájl nem létezik, vagy akár nem létező kulcsra kívánt rákérdezni a felhasználó (parancssorból); vagy
+* `-1`, ha belső hiba történt, amit `confy` nem tudott lekezelni.
+
+=== Konfigurációs formátum
+
+A `confy` program a feladat által megadott egyszerűsített Java properties formátumú konfigurációs fájlokat tud beolvasni.
+
+A fájl üres vagy komment sorokból, vagy kulcs érték hozzárendelésekből áll.
+Üres és komment sorok nem kerülnek felhasználásra, a feldolgozó egyszerűen elhagyja őket. A kulcs-érték hozzárendeléseket pedig a beolvassa, és a felhasználónak, vagy programozónak, elérhetővé teszi lekérdezésre.
+
+==== BNF leírás
+
+A formátum BNF leírása, ahogy a feladat megadta (a feladat ENBF-nek hívta, de szimplán BNF, ezért innentől így kezeljük).
+A leírás angolra lett fordítva, és a formázás modosításra került a könnyebb olvashatóság érdekében.
+Egyéb modosítások nem történtek, és a leírás ekvivalens a feladatban megadottal.
+
+[source,bnf]
+----
+<line> ::= <empty>
+         | <comment>
+         | <key>=<value>
+
+<comment> ::= #<arbitrary_character_string>
+
+<key>   ::= <alphanumeric_character_string_starting_with_a_letter>
+<value> ::= <word>
+          | "<arbitrary_character_string>"
+          | '<arbitrary_character_string>'
+<word>  ::= <alphanumeric_character_string>
+----
