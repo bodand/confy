@@ -89,3 +89,4 @@ $RECYCLE.BIN/
 *.lnk
 _build*/
 _Deparsed_XSubs.pm
+stem-*

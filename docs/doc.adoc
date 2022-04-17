@@ -23,7 +23,8 @@ Bodor András - YZBQWV
 :pdf-fontsdir: {docdir}/fonts
 :pdf-themesdir: {docdir}
 :pdf-theme: plex.yml
-:stem:
+:mathematical-format: svg
+:stem: latexmath
 
 == Specifikáció
 
@@ -706,8 +707,9 @@ A programhoz használt teszt fájlok megtalálhatóak a <<ap_inputs>> fejezetben
 Jelenleg 429 darab teszteset került definiálásra, melyek teljesen automatikusan lefutnak.
 
 [NOTE]
-Az összes típusok halmaza stem:[cc "T"].
-Az összes beépített cache típusok halmaza stem:[cc "C"].
+Az összes típusok halmaza stem:[\mathcal{T}].
+Az összes beépített cache típusok halmaza stem:[\mathcal{C}].
+a
 
 === cli_mode függvény
 
@@ -1012,25 +1014,25 @@ Az érvénytelen string bemenet minden T-re `is = "#"`.
 [NOTE]
 Ezek a tesztek az összes beépített cache típusra lefutnak.
 
-. adott stem:[C in cc "C"], a hozzá tartozó bemenet literáljával konstruálható
-. adott stem:[C in cc "C"], a hozzá tartozó bemenet std::move-olt változójával konstruálható
-. adott stem:[C in cc "C"], a `get_value_ptr` tagfüggvény konstans
-. adott stem:[C in cc "C"], a `get_value_ptr` tagfüggvény visszatérési típusa konstansra mutató
-. adott stem:[C in cc "C"] ami literállal lett konstruálva, a `get_value_ptr` értéke nem nullptr
-. adott stem:[C in cc "C"] ami std::move-al lett konstruálva, a `get_value_ptr` értéke nem nullptr
-. adott stem:[C in cc "C"] ami literállal lett konstruálva, `get_value_ptr` nem dob kivételt
-. adott stem:[C in cc "C"] ami std::move-al lett konstruálva, `get_value_ptr` nem dob kivételt
-. adott stem:[C in cc "C"] ami std::move-al lett konstruálva, a `get_value_ptr` visszaadott pointer nem egyezik meg a bemenetre mutató pointer értékével
+. adott stem:[C \in \mathcal{C}], a hozzá tartozó bemenet literáljával konstruálható
+. adott stem:[C \in \mathcal{C}], a hozzá tartozó bemenet std::move-olt változójával konstruálható
+. adott stem:[C \in \mathcal{C}], a `get_value_ptr` tagfüggvény konstans
+. adott stem:[C \in \mathcal{C}], a `get_value_ptr` tagfüggvény visszatérési típusa konstansra mutató
+. adott stem:[C \in \mathcal{C}] ami literállal lett konstruálva, a `get_value_ptr` értéke nem nullptr
+. adott stem:[C \in \mathcal{C}] ami std::move-al lett konstruálva, a `get_value_ptr` értéke nem nullptr
+. adott stem:[C \in \mathcal{C}] ami literállal lett konstruálva, `get_value_ptr` nem dob kivételt
+. adott stem:[C \in \mathcal{C}] ami std::move-al lett konstruálva, `get_value_ptr` nem dob kivételt
+. adott stem:[C \in \mathcal{C}] ami std::move-al lett konstruálva, a `get_value_ptr` visszaadott pointer nem egyezik meg a bemenetre mutató pointer értékével
 
 === type_id
 
-. adott stem:[T in cc "T"], type_id nemnulla értéked ad
-. adott stem:[T,U in cc "T" (T != U)], type_id különböző értékeket ad
-. adott stem:[T in cc "T"], type_id kétszer ugyan azt az értéked adja
-. adott stem:[T in cc "T"], type_id == tagfüggvénye konstans
-. adott stem:[T in cc "T"], type_id =! tagfüggvénye konstans
-. adott stem:[T in cc "T"], type_id == tagfüggvénye nem dobhat
-. adott stem:[T in cc "T"], type_id =! tagfüggvénye nem dobhat
+. adott stem:[T \in \mathcal{T}], type_id nemnulla értéked ad
+. adott stem:[T,U \in \mathcal{T},\;T \ne U], type_id különböző értékeket ad
+. adott stem:[T \in \mathcal{T}], type_id kétszer ugyan azt az értéked adja
+. adott stem:[T \in \mathcal{T}], type_id == tagfüggvénye konstans
+. adott stem:[T \in \mathcal{T}], type_id =! tagfüggvénye konstans
+. adott stem:[T \in \mathcal{T}], type_id == tagfüggvénye nem dobhat
+. adott stem:[T \in \mathcal{T}], type_id =! tagfüggvénye nem dobhat
 
 [#ap_inputs]
 [appendix]
