@@ -1,0 +1,60 @@
+## TokyoNight Color Scheme
+# The followings are the TokyoNight color scheme's colors in confy format
+#
+## Value encoding
+#
+# The colors are encoded in hexadecimal without a leading prefix, this allows
+# easier interop with things that require them prefixed differently:
+# Xresources expects it in `#RRGGBB` format, while Alacritty in `0xRRGGBB`.
+# Therefore we only store it as `RRGGBB` and do what you want with it.
+#
+## Key names
+#
+# Values are set with both Xresources style `colorXX` names, and human readable
+# names. The colors and their alternatives are called `<color>1` and
+# `<color>2`, e.g. `red1` and `red2`, corresponding to `color1` and `color9`
+# respectively.
+
+foreground='A9B2D6'
+background='20212E'
+cursorColor='FAFAFA'
+
+color0='06080A'
+black1='06080A'
+color8='515478'
+black2='515478'
+
+color1='FF7A93'
+red1='FF7A93'
+color9='803D19'
+red2='803D19'
+
+color2='B9F27C'
+green1='B9F27C'
+color10='618041'
+green2='618041'
+
+color3='E0AF68'
+yellow1='E0AF68'
+color11='AEC795'
+yellow2='AEC795'
+
+color4='7AA2F9'
+blue1='7AA2F9'
+color12='3E5380'
+blue2='3E5380'
+
+color5='AD8EE6'
+magenta1='AD8EE6'
+color13='7C66E4'
+magenta2='7C66E4'
+
+color6='515478'
+cyan1='515478'
+color14='5D6791'
+cyan2='5D6791'
+
+color7='A9B2D6'
+white1='A9B2D6'
+color15='A1A6BA'
+white2='A1A6BA'

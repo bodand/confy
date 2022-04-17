@@ -1,12 +1,15 @@
 = confy, A confy projekt dokumentációja
+Bodor András - YZBQWV
+2, {docdate}: A programozás alapjai 2. 2021/2022/2 félév nagy házi feladat
 :title-separator: ,
-:author: Bodor András
+:version-label: Revízió
 :email: bodand@pm.me
 :appendix-caption: Függelék
 :example-caption: Példa
 :figure-caption: Ábra
 :listing-caption: Listázás
 :table-caption: Táblázat
+:note-caption: Megjegyzés
 :lang: hu
 :doctype: book
 :media: screen
@@ -20,6 +23,7 @@
 :pdf-fontsdir: {docdir}/fonts
 :pdf-themesdir: {docdir}
 :pdf-theme: plex.yml
+:stem:
 
 == Specifikáció
 
@@ -28,6 +32,15 @@ A `confy` program az ajánlott feladat ötletek közül a "`Konfiguráció beolv
 A project egy konfiguráció olvasó program, amely--a feladat előírásai szerint--egy osztály segítségével valósítja meg a feladatot.
 Képes több különböző típusú objektum lekérdezésére, a felhasználó{wj}footnote:[itt: az osztályt használó programozó] által kért típusban.
 A használt fájlformátum egy sor orientált részhalmaza a Java properties fájlformátumának.
+
+=== Motiváció
+
+A UNIX leszármazott (pl.
+BSD, Linux) operációs rendszereket PC-n használók gyakran találják szembe magukat azzal az ötlettel, hogy az asztali környezetüket szeretnék saját ízlésüknek megfelelőre átszabni{wj}footnote:[A "`rice`"-olás folyamata, amikor az asztali felület komponenseit, pl. ablak kezelő, tálca, egyes alkalmazások, stb. az adott felhasználó személyre szabja színekkel, formákkal, átlátszósággal, stb.].
+Ilyenkor sok különböző program számára kell, hogy összefüggő konfigurációs fájlt kapjanak, hogy a kapott rendszer koherens kinézettel rendelkezzen.
+Erre a problémára léteznek megoldások, mint például az Xresources és az `xrdb` program, ami egy közös X által kezelt adatbázisban minden program által lekérdezhető kulcs-érték hozzárendeléseket tárol.
+A probléma viszont nem minden program konfigurációja képes erre hivatkozni, így nem jutunk igazából előrébb vele, hiszen csak egy extra konfigurációs fájllá válik, amit karban kell tartani.
+A `confy` által nyújtott megoldás, hogy rá hivatkozva, könnyedén lehetséges a közös értékeket, pl. a színsémát, egy confy konfigurációban tárolni, majd, sablonok alapján, a többi program különböző konfigurációs fájljait legenerálni, egy szimpla shell, Perl, vagy egyéb egyszerűen kezelhető, tetszőleges szkript nyelvet használva.
 
 === Funkcionalitás
 
@@ -86,7 +99,8 @@ Ezen értékek a következők lehetnek:
 A `confy` program a feladat által megadott egyszerűsített Java properties formátumú konfigurációs fájlokat tud beolvasni.
 
 A fájl üres vagy komment sorokból, vagy kulcs érték hozzárendelésekből áll.
-Üres és komment sorok nem kerülnek felhasználásra, a feldolgozó egyszerűen elhagyja őket. A kulcs-érték hozzárendeléseket pedig a beolvassa, és a felhasználónak, vagy programozónak, elérhetővé teszi lekérdezésre.
+Üres és komment sorok nem kerülnek felhasználásra, a feldolgozó egyszerűen elhagyja őket.
+A kulcs-érték hozzárendeléseket pedig a beolvassa, és a felhasználónak, vagy programozónak, elérhetővé teszi lekérdezésre.
 
 ==== BNF leírás
 
@@ -107,4 +121,1015 @@ Egyéb modosítások nem történtek, és a leírás ekvivalens a feladatban meg
           | "<arbitrary_character_string>"
           | '<arbitrary_character_string>'
 <word>  ::= <alphanumeric_character_string>
+----
+
+== Terv
+
+[#class_hierarchy]
+=== Osztályhierarchia
+
+A `confy` által használt osztályok három csoportba tagolhatóak: a konfigurációt kezelő és elérhetővé tevő osztályok, a cache-t implementáló osztályok, és a fordítási időben dinamikus osztályhalmazon vizitálást gyorsan lehetővé tevő segítőosztályok.
+
+Egyes leírások idézőjelekben hivatkoznak különféle mintákra.
+Ilyenkor az Erich Gamma, Richard Helm, Ralph Johnson és John Vlissides által írt "Design Patterns, Elements of Reusable Object-Oriented Software" c. könyv{wj}footnote:[ISBN-13: `978-0-201-63361-0`] által definiált dizájn mintákra hivatkozik.
+Ezek angol neve használatos, neveik lefordításának megkísérlése nem történt.
+
+==== Konfigurációhoz tartozó osztályok
+
+* config_set<parser P>
+* config
+* parser<class T>
+* confy_parser
+* bad_syntax
+* bad_key
+
+[#class_config_set]
+===== config_set<parser P>
+
+Tárolja az összes beolvasott konfigurációs értéket.
+Ezeket az értékeket egy std::vector-ban tárolja, ábécé sorrendben, ezzel gyorsítva egyes lekérdezések idejét.
+Az lekérdezés és beillesztés során használt algoritmusok: <<bin_search>>.
+
+Az osztály felelős a sablonparaméterként átadott olvasó (parser) használatával megvalósítani konstruktorában a megadott folyam vagy fájl beolvasását.
+A sablonparaméterként átadott paraméter egy fordítási idejű megvalósítása a "Strategy" mintának.
+Az olvasásához használt algoritmus: <<config_parse>>
+
+Az átadott sablonparaméternek meg kell felelnie a <<concept_parser>> koncepció előírásainak.
+
+[#class_config]
+===== config
+
+Egy konfigurációs értéket tároló objektum, mely értékeit nem változtathatóan egységbezárja.
+
+Az érték kulcsának lekérdezését a `get_key` konstans tagfüggvény biztosítja.
+Az érték lekérdezését pedig a `get_as<T>` konstans tagfüggvény.
+Ez kétféle módon látja el feladatát:
+
+* ha az objektum cachelhető (kielégíti a `cachable<class T>` koncepciót) akkor készít egy cache objektumot, és lekérdezi az értéket;
+* különben létrehozza az objektumot és visszaadja.
+
+Bár a függvény módosíthatja a cache tartalmát, mégis konstansnak van beállítva.
+Mivel a cache létezése nem számítható kívülről értelmezhető működésnek, ezért a kívülre szimulált működés szempontjából nem is létezik.
+Hogy ezt a látszatot fenntartsuk, a tagfüggvény tehát konstans, a cache pedig `mutable`.
+
+A visszaadott típus a `get_as<T>` függvényből vagy T, ha triviálisan másolható a típus, különben `const T&`.
+
+A lekérdezés algoritmusa: <<maybe_caching_retrieval>>.
+
+[#concept_parser]
+===== parser<class T>
+
+Koncepció mely előírja mit kell teljesíteni egy olvasónak, melyet a <<class_config_set>> osztály képes kezelni.
+Ez a következő három feltétel:
+
+* paraméter nélkül konstruálható
+* létezik `next_line` tagfüggvénye, mely egy `std::istream` referenciát vesz át, és egy `std::optional<std::string>`-et ad vissza
+* létezik `parse_line` tagfüggvénye, mely egy `std::string_view`-et vesz át, és egy `std::pair<std::string, std::string>`-et ad vissza
+
+Bár szemantikai tartalom nyelvi szinten nem társítható a koncepciókhoz, a következőket feltételezi a koncepció készítője, és így feltételezheti minden használója:
+
+* a `next_line` tagfüggvény a folyamból olvas az általa definiált módon érvényes (logikai) sorokat amíg végére nem ér a folyamnak.
+Ilyenkor, és csak ilyenkor, visszaad egy `std::nullopt` objektumot.
+* a `parse_line` tagfüggvény egy sort bont fel az általa definiált kulcs és érték párra.
+
+Amennyiben egy osztály megfelel a koncepciónak, de a szemantikai követelményeknek nem felel meg, a koncepciót használó osztály működése definiálatlan.
+
+===== confy_parser
+
+A konfiguráció olvasó objektum.
+
+Két tagfüggvénnyel rendelkezik:
+
+Első a `next_line`, ami egy sort beolvas a folyamról és visszaadja azt.
+Ha valamilyen okból (pl.
+EOF) a folyam hiba módba váltott, `std::nullopt` értéket ad vissza.
+Az üres sorokat, és azokat, amelyek kettős kereszttel kezdődnek átugorja.
+
+Másik `parse_line`, ami az első egyenlőség jelig kiválasztja egy sztringből a kulcsot majd az utána lévő, opcionálisan idéző jelek közötti, részt pedig, mint értéket.
+Ezt a kettőt egy kettesben visszaadja.
+
+A sor olvasó és kiválogató algoritmus itt <<confy_line_reader>>, a kulcs érték szeparáló pedig itt <<confy_key_value_parser>> található meg.
+
+===== bad_syntax
+
+Kivétel típus, ami akkor kerül eldobásra, amikor egy confy_parser objektum hibás szintaxisú fájlt talál.
+A hibaüzenetet formázó algoritmus: <<syntax_formatting>>
+
+===== bad_key
+
+Kivétel típus, ami akkor kerül eldobásra, ha a konfigurációs fájl kétszer tartalmazza ugyan azt a kulcsot.
+A hibaüzenet triviálisan alkotható, nem szükséges külön algoritmus.
+
+==== Cache osztályok
+
+* cache
+* visitable_cache<class D>
+* *_cache (int_cache, long_cache, ...)
+* cache_factory<class T>
+* cachable<class T>
+
+===== cache
+
+Az általános cache őstípus.
+Nem tárol semmit, és semmilyen típushoz nincs rögzítve, nem is sablon.
+A polimorf tároláshoz használatos, egy birtokolt mutatót tárol a `config`
+osztály, amennyiben történt már sikeresen elcachelt lekérdezés.
+
+===== visitable_cache<class D>
+
+Egy olyan osztály `cache` fölött, ami implementálja annak `accept` tisztán virtuális függvényét.
+Ezt a CRTP (Curiously Recurring Template Pattern) módszer segítésével teszi:
+mindenki aki örökölne belőle úgy tudja megtenni, hogy átadja saját magát neki sablonparaméterként.
+Ezzel már képes egy egyszerű `static_cast` segítségével át tudja a `this` mutatót konvertálni
+`D` típusú mutatóra, amit utána már a visitor `visit` függvényének át tud adni.
+
+Mivel ez az osztály egy automatikus implementációt biztosít csak a "Visitor" minta implementálásra, így nem lenne feltétlen szükséges, de mivel minden cache típusnak implementálnia kéne az adott függvényt, pontosan ugyanazzal az egy sor kóddal (es sok cache típus létezik, hiszen minden cachelhető típushoz létezik külön cache leszármazott) így csak copy-paste lenne az összes implementáció, ez pedig nem olyan komplikált kód, hogy ne érje meg a sok másolgatást, amit megspóroljon, ami szinte minden esetben rossz.
+
+===== *_cache osztályok
+
+Adott típusokat tároló cache osztályok.
+Konstruálhatóak az adott típus belemozgatásával (std::move-olt típusból, pl. `int&&`-t paramétert át tud venni az int_cache konstruktora).
+
+Egyetlen publikus tagfüggvényük a `get_value_ptr()`, ami egy konstans pointert ad vissza a tárolt értékre.
+Ezzel megoldható, hogy elcachelehessünk nem másolható típusokat.
+
+===== cache_factory<class T>
+
+Egy cache_factory, ami vagy egy cache objektumot hoz létre, vagy csak a lekérdezett típust, attól függ, milyen tagfüggvényt definiál adott T-re a specializációja.
+Az általános sablon nem definiál semmit.
+
+Ha nem cachelhető az objektum, akkor csupán a `make` tagfüggvény definiálandó.
+Ennek `const std::string&` a paramétere, és visszaad egy új T objektumot.
+Az alapból definiált specializációk közül a string-szerű típusok (`std::string`, `std::string_view`, `const char*`) definiálnak ilyen cache_factory-t.
+
+Ha cachelés lehetséges, akkor egy típusként definiálandó egyrészt a `cache_type` tagtípus, arra a cache típusra, amelyik örököl
+`visitable_cache<class D>`-ből, és implementálja T cachelésének módját.
+Másrészt a `construct` tagfüggvény, mely egy `std::unique_ptr<cache>`-ot állít elő egy `const std::string&` paraméterből.
+Ha ez `nullptr`-t ad vissza, a típus elkészítése sikertelen volt.
+
+[#concept_cachable]
+===== cachable<class T>
+
+A cachelhetőséget biztosító koncepció.
+Egy T típus cachelehetőnek számít ha a következők teljesülnek.
+
+* Létezik a cache_factory<T>::cache_type típus, ami implementálja T osztály tárolását.
+* A cache_factory<T> osztály paraméter nélkül konstruálható.
+* Az előbbi osztálynak létezik `construct` tagfüggvénye, ami egy `const std::string&`-et vesz át, és visszaad egy `std::unique_ptr<cache>` objektumot.
+
+==== Gyors vizitáló osztályok
+
+Ez a kategória a speciális szükségletet elégíti ki, miszerint egy olyan "Visitor" mintát kell készíteni, amivel általunk nem ismert típusokat is lehetséges vizitálni.
+Az eredeti megoldás, ahogy a "Visitor" mintát szokásos implementálni az zárt az osztályok halmazára: utólagosan csak a visitor módosításával lehetséges új osztály felvenni a rendszerbe úgy, hogy az osztályhierarchia által előzőleg biztosított vizitálhatósági garancia megmaradjon.
+Mivel jelenleg az osztályok halmaza nyitott, így nem lehetséges a szokásos módszert implementálni.
+A legegyszerűbb és legkézenfekvőbb egy `dynamic_cast`-os megoldás lenne, de tervezés közben egy nagyon rövid prototípus (és annak profileolása) bizonyította, hogy, amennyiben cache-ként szeretnénk használni, a sebessége egyáltalán nem megfelelő, annyira, hogy inkább megérné újraszámolni a legtöbb értéket, mint az így implementált "cache"-ben tárolni.
+Pár iterációs prototípus után a következő megoldás GCC-n{wj}footnote:[A `-fdevirtualize-speculatively` flag használatával.] képes akár egy szimpla, nem virtuális, függvényhívás sebességével vetekedni{wj}footnote:[Komplex esetekben lehetséges, hogy a spekulatív devirtualizációs próbálkozás nem feltétlen lenne sikeres, de akkor is gyorsabb a naïve `dynamic_cast` implementációnál. Ezt a clang benchmarkok mutatták, mely nem képes a spekulatív devirtualizációra, és mégis jelentősen (akár 17x) gyorsabb.].
+
+Ehhez a következő osztályokra van szükség, bár egynek létezik általánosabb megfelelője a szabványos könyvtárban, annak általánossága miatt sebessége nem megfelelő.
+
+* cache_visitor_for<cachable T>
+* visitor<class... Ts>
+* typed_visitor<class T>
+* visitor_base
+* type_id
+
+===== cache_visitor_for<cachable T>
+
+Készít egy vizitort ami képes egy T-t tároló cache-t vizitálni.
+A megkövetelt <<concept_cachable>> koncepció miatt a kövekezőt ki tudja használni: `cache_factory<T>::cache_type` létezik és egy típus, ez lesz az a cache típus, amit fog vizitálni a vizitor, hogy lekérdezhesse a cache tartalmát.
+
+Vizitálás után a belső tárolója eltárol egy konstans mutatót a lekérdezett típusra.
+Ha nem talál megfelelő osztályt látogatás közben, akkor a belső tárolója `nullptr`-t tartalmaz, és a `valid()` tagfüggvény hamisat ad vissza.
+
+Amennyiben `valid()` igaz, a `value()` tagfüggvény egy konstans referenciát ad vissza a belső pointer dereferálásával.
+Ez nem feltétlen ideális a triviálisan másolható típusok esetén, de elengedhetetlen a másolhatatlan típusok támogatásához.
+A jelenlegi álláspont, hogy nem akkora szűk keresztmetszet a triviálisan másolható típusok referenciaként kezelése, hogy az egész folyamaton érdemes lenne végig vezetni a visszatérési típusokban, hogy `std::conditional_t<std::is_trivially_copyable_v<T>, T, std::add_lvalue_reference_t<std::add_const_t<T>>>`, ahelyett, hogy `const T&`.
+
+A `value()` függvényhívás előfeltétele, hogy `valid()` igaz.
+
+Az vizitáláskor végrehajtott algoritmus triviális, nem érdemel külön jegyzéket.
+Mivel a virtuális függvényhívás elintézi a típus ellenőrzést, így pusztán csak a paraméterre meghívja a `get_value_ptr()` konstans tagfüggvényt, majd eltárolja a visszaadott mutatót.
+
+===== visitor<class ...Ts>
+
+Szintaktikai cukor, ami az összes `Ts`-beli `T`-re örököl `typed_visitor<T>`-ből.
+Definiálja a `try_visit<T>` tagfüggvényt, ami megnézi, hogy az adott T-hez tartozó típus azonosító egyezik-e a paraméterként átadott `type_id` értékkel.
+Ha igen végrehajtja a típusos vizitálást, és igazat ad vissza, hamisat ha nem egyeznek a típusok.
+
+Az algoritmus pontosan egyezik az itt leírtakkal, nem tartozik hozzá külön pszeudókód leírás.
+
+Implementálja a `visit_typeless` tagfüggvényt, ami `visitor_base`-óta tisztán virtuális ennek függvényében: amíg az egyik try_visit igazat nem ad, az összes `Ts`-beli `T`-re megpróbálja a vizitálást végrehajtani.
+Az algoritmus triviális, nem tartozik hozzá pszeudókód leírás.
+
+===== typed_visitor<class T>
+
+Deklarálja a tisztán virtuális `do_visit` tagfüggvényt `T&` típusra paraméterezve.
+Ezt kell implementálnia a konkrét vizitor típusnak.
+
+Virtuálisan örököl `visitor_base`-ből, hogy több típusra is lehessen belőle örökölni.
+
+===== visitor_base
+
+Az általános vizitor alaptípus.
+Definiálja a `visit` tagfüggvényt sablonként `T*`-ra, ez törli a típusinformációt és `void*`-ként adja tovább a tisztán virtuális `visit_typeless` tagfüggvénynek, egy típus azonosító paraméterrel.
+
+===== type_id
+
+Típus azonosító típus.
+Minden típushoz egy 32-bites számot rendel, amivel később azonosítható egyenlőség szempontjából.
+A művelet bijektív, de inverze nem implementált és nem is triviális.
+
+A leképezést a `id_of<T>` statikus tagfüggvénnyel lehet végrehajtani, ami egy `type_id` objektumot ad vissza.
+A `type_id` típusra csak az egyenlőség és az egyenlőtlenség definiált művelet.
+
+A konstruktor privát, hogy ne lehessen érvénytelen típus azonosító számmal létrehozni.
+
+A típus számláló egy statikus 32-bites előjel nélküli egész.
+A típushoz tartozó azonosítót pedig a statikus `make_id_for_type<T>` függvény hajtja végre:
+mivel minden sablon különböző függvényeket generál, a függvény statikus változóban eltárolja adott `T`-hez rendelt értéket, 0-t ha még nincs ilyen.
+Új érték esetén a statikus `next_id` változó értékát állítja be, majd ezt inkrementálja.
+
+A típus azonosító algoritmusa: <<type_id_creator>>
+
+Jelenlegi implementáció 2^32-en darabra limitálja a cachelhető típusok számát, és ebből 15-öt lefoglal.
+Ezt nem tartom valóságban problémás limitációnak, de amennyiben az, triviális 2^64-enre növelni a határt, ami meg már ténylegesen lehetetlen, hogy ne legyen elég akármit is készítünk, bár ha valaki még így is szeretné, implementálhat egy statikus környezetben működő tetszőleges nagy számot tároló könyvtárat, de a jelenlegi meglátás szerint ez kiesik a `confy` projekt hatóköréből.
+
+==== UML osztálydiagram
+
+A követező a `confy` projekt tervéhez tartozó UML osztálydiagram.
+A diagram SVG formátumú, így nagyítható az olvashatóság érdekében{wj}footnote:[Tapasztalat szerint böngészők nem képesek elegendő nagyítást biztosítani. Dedikált PDF olvasó szükséges: ezek közül Adobe Acrobat DC, és KDE Okular biztosan képesek helyesen megjeleníteni, és olvasható méretekig nagyítani.].
+
+[plantuml,format=svg]
+----
+include::confy.puml[]
+----
+
+=== Algoritmusok
+
+A forrás a következő algoritmusokat fogja tartalmazni.
+Mindegyik használata a megfelelő osztály <<class_hierarchy>>beli leírásnál jelölve van.
+Ezen kívül a main függvény és a két felhasználási üzemmód által használt algoritmusok is itt van felsorolva.
+
+A leírás egy pszeudókód formátumban történik, a szintaxis az egy elég változatos Pascal/{cxx}/Perl/Folyóbeszéd keverék.
+Van, ahol funkcionális nyelvekből ismert minta illesztés történik ({cxx}-ban structured binding), visszatérés pedig Smalltalkból a felfele nyíl.
+Minden esetben a legértelmezhetőbb szintaxis használt egy egy lépés leírására, bár valahol szükség van a felsorolt nyelvek ismeretére.
+
+[#main_fn]
+==== A main függvény
+
+[listing]
+----
+függv. main(argc: int, argv: string[]): int
+    próba
+        ha argc >= 3
+            cfg_file := argv[1]
+            keys := argv[2..argc]
+            ↑ cli_mode(cfg_file, keys)
+        e.v.
+
+        ha argc = 2
+            cfg_file := argv[1]
+        különben
+            ki: Which configuration file whould you like to use?
+            be: cfg_file
+            ↑ 1 ha nem létezik cfg_file
+        e.v.
+        ↑ interactive_mode(cfg_file)
+    elkap ex
+        ki: ex.miért()
+        ↑ -1
+    p.v.
+f.v.
+----
+
+[#interactive_mode]
+==== Interaktív üzemmód
+
+[listing]
+----
+függv. interactive_mode(cfg_file: fs::path): int
+    konfig := config_set(cfg_file)
+
+    ciklus
+        próba
+            be: kulcs
+            ↑ 0 ha kulcs üres
+
+            érték := konfig.get_as<string_view>(kulcs)
+            ki: érték
+        elkap ex: invalid_argument
+            # semmi, érvénytelen kulcs
+        p.v.
+    c.v.
+f.v.
+----
+
+[#cli_mode]
+==== Parancssoros üzemmód
+
+[listing]
+----
+függv. cli_mode(cfg_file: fs::path, kulcsok: span<string>): int
+    konfig := config_set(cfg_file)
+
+    próba
+        ciklus kulcs ∈ kulcsok
+            ki: konfig.get_as<string_view>(kulcs)
+        c.v.
+        ↑ 0
+    elkap ex: invalid_argument
+        ki: ex.miért()
+        ↑ 2
+    p.v.
+f.v.
+----
+
+[#bin_search]
+==== Paraméterezett bináris keresés
+
+Mind a beillesztés mint a lekérdezés egy bináris keresés algoritmussal implementálható, így egy általános paraméterezett bináris keresés nevében implementáljuk mind két műveletet.
+A bináris keresés 3 funktort vesz át, melyek a rendezés összehasonlítását, a sikeres és sikertelen találat esetén a végrehajtandó kódrészletet adják meg.
+
+A következő listázás implementálja mind a paraméterezett bináris keresést, mind a két tagfüggvényt amit szeretnénk implementálni.
+A bináris keresés maga egy globális függvény, nem szerepel az osztálydiagramon.
+
+A `(...) |-> ...` szintaxis egy lambda függvénynek felel meg, ami a zárójel közötti paraméterekkel hívható, és a nyíl utáni kódot hajtja végre meghíváskor.
+
+[listing]
+----
+függv callback_binary_search(const T& vec,
+                             CmprFn&& cmpr,
+                             SuccFn&& succ,
+                             FailFn&& fail): auto
+    eleje := 0
+    vége := vec.size()
+    ciklus amíg eleje != vége
+        közepe := midpoint(eleje, vége)
+        dir := cmpr(vec[közepe])
+        ha dir = 0
+            ↑ succ(eleje, közepe, vége)
+        különben ha dir < 0
+            eleje := közepe + 1
+        különben ha dir > 0
+            vége := közepe
+        e.v.
+    c.v.
+    ↑ fail(eleje, közepe, vége)
+f.v.
+
+elj. config_set<P>::emplace_config(kulcs: string&&, érték: string&&)
+    callback_binary_search(_configs,
+        (const config& cfg)
+            |-> cfg.get_key() <=> kulcs,
+        (size_t, size_t, size_t)
+            |-> dob bad_key(kulcs, _file),
+        (size_t, size_t, size_t vége)
+            |-> _configs.emplace(begin(_configs) + vége, kulcs, érték))
+e.v.
+
+függv. config_set<P>::get<T>(): T
+    ↑ callback_binary_search(_configs,
+        (const config& cfg)
+            |-> cfg.get_key() <=> kulcs,
+        (size_t, size_t közepe, size_t)
+            |-> _configs[közepe].get_as<T>(),
+        (size_t, size_t, size_t)
+            |-> dob out_of_range("rossz kulcs: {kulcs}"))
+f.v.
+----
+
+[#config_parse]
+==== Konfiguráció olvasás
+
+[listing]
+----
+ctor config_set<P>::config_set(cfg_file: fs::path)
+    _file := cfg_file
+    strm := ifstream(cfg_file)
+    dob invalid_argument("érvénytelen fájl: $cfg_file") ha strm nem nyitott
+    config_set(strm)
+ctor vége
+
+ctor. config_set<P>::config_set(strm: istream)
+    _file := fs::path()
+    parser := P(_file)
+    ciklus amíg van értéke (talán_sor := parser.next_line(strm))-nak
+        (sor) := talán_sor
+        (kulcs, érték) := parser.parse_line(sor)
+        emplace_config(kulcs, érték)
+    c.v.
+ctor vége
+----
+
+[#maybe_caching_retrieval]
+==== Talán cachelő lekérdezés
+
+[listing]
+----
+függv. config::get_as<T>() const: ha triviálisan_másolható<T> T különben const T&
+    forditáskor ha nem cachable<T>
+        ↑ cache_factory<T>::make(_value)
+    különben
+        vtor := cache_visitor_for<T>()
+        ha _cache nem null
+            _cache^.accept(vtor)
+            ↑ vtor.value() ha vtor.valid()
+        e.v.
+        # cache miss :(
+        _cache := cache_factory<T>::construct(_value)
+        dob invalid_argument("nem konstruálható a kért típus") ha _cache null
+        _cache^.accept(vtor)
+        dob runtime_error("ismeretlen hiba a cache lekérdezése közben") ha nem vtor.valid()
+        ↑ vtor.value()
+    e.v.
+f.v.
+----
+
+Mivel a teljes algoritmus kicsit komplikált a következő ábra segít értelmezni azt az esetet, amikor cachelés történik.
+Ez az összes hívott objektumot tartalmazza, beleértve a vizitort.
+A zöld útvonal tárolja az első, sikeres cache elérés esetén az útvonalat, a kék pedig, azt ha szükséges új objektumot létrehozni.
+Az első két másik színű nyíl, mind kettő esetben megtörténik.
+
+[plantuml,format=svg]
+----
+@startuml
+skinparam DefaultFontName "IBMPlexSerif"
+actor Felhasználó as user
+
+user -[#00f0ff]> config_set : get<T>("kulcs")
+config_set <- config_set : megkeresi "kulcs"-hoz tarozó configot
+user <[#red]- config_set : ha nincs kulcs, kivétel
+
+config_set -[#00f0ff]> config : get_as<T>()
+config <- config : létezik-e cache
+group Vizitáció
+    config -[#black]> cache : ha igen, _cache->accept(visitor)
+    visitor <[#black]- cache : visitor.visit(this)
+    cache <[#black]- visitor : ha a cache cache_factory<T>::cache_type típusú:\nget_value_ptr()
+    cache -[#black]> visitor : mutató a tárolt értékre
+    cache x[#red]- visitor : különben sikertelen
+end
+config -[#green]> visitor : valid()
+config <[#green]- visitor : sikerült-e a cache lookup
+config -[#green]> visitor : ha igen, value()
+config <[#green]- visitor : const T& a tárolt értékre
+user <[#green]- config : visitor értéke
+
+config -[#blue]> "cache_factory<T>" : construct(_value), ha az eddigi\nelágazások közül bármelyik hamis
+"cache_factory<T>" -[#blue]> "cache_factory<T>::cache_type" : constructor
+cache <<[#blue]- "cache_factory<T>::cache_type" : anya constructor
+cache -[#blue]>> "cache_factory<T>::cache_type" : anya objektum
+"cache_factory<T>" <[#blue]- "cache_factory<T>::cache_type" : új objektum
+config <[#blue]- "cache_factory<T>" : az új cache objektum =: _cache
+user <[#red]- config : kivétel, ha sikertelen (_cache = null)
+
+group Vizitáció
+    config -[#black]> cache : _cache->accept(visitor)
+    visitor <[#black]- cache : visitor.visit(this)
+    cache <[#black]- visitor : ha a cache cache_factory<T>::cache_type típusú:\nget_value_ptr()
+    cache -[#black]> visitor : mutató a tárolt értékre
+    cache x[#red]- visitor : különben sikertelen
+end
+config -[#blue]> visitor : valid()
+config <[#blue]- visitor : sikerült-e a cache lookup
+user <[#red]- config : kivétel, ha sikertelen
+config -[#blue]> visitor : value()
+config <[#blue]- visitor : const T& a tárolt értékre
+user <[#blue]- config : visitor értéke
+
+@enduml
+----
+
+[#syntax_formatting]
+==== Szintaktikai hiba formázás
+
+[listing]
+----
+ctor bad_syntax const: const char*
+    # többi érték elmentése
+    sstrm := ostringstream()
+    ha _file nem üres
+        file_name := _file.string()
+    különben
+        file_name := "<unknown file>"
+    e.v.
+    ki(sstrm): file_name, ":", _ln, ":", _col, ": syntax error: "
+    offset := a sstrm folyamba eddig írt betűk hossza
+    ki(sstrm): _line, <újsor>
+    ki(sstrm): " " * (offset + _col - 1), "^--HERE\n"
+    _buf := sstrm.str()
+ctor vége
+----
+
+[#confy_line_reader]
+==== Confy sor olvasó
+
+[listing]
+----
+függv. confy_parser::next_line(strm: istream): optional<string>
+    ciklus amíg strm érvényes
+        next_ln := következő sor strm-ből
+        chomp next_ln
+        ciklus újra ha next_ln üres
+        ciklus újra ha next_ln[0] = '#'
+        ↑ (next_ln)
+    c.v.
+    ↑ ()
+f.v.
+----
+
+[#confy_key_value_parser]
+==== Confy kulcs/érték szeparáló
+
+[listing]
+----
+függv. confy_parser::parse_line(ln: string_view): pair<string, string>
+    dob bad_syntax(ln, _ln_cnt, 1, _file) ha nem betű ln első karaktere
+    kulcs := ''
+    i := 0
+    ciklus amíg i < ln mérete és ln[i] <> '='
+        dob bad_syntax(ln, _ln_cnt, i + 1, _file) ha ln[i] nem alfanumerikus karakter
+        kulcs += ln[i]
+        inc(i)
+    c.v.
+    dob bad_syntax(ln, _ln_cnt, i, _file) ha i == ln mérete
+    inc(i) # ugorjuk át az egynelőség jelet
+
+    ha ln[i] = '\'' vagy ln[i] = '"'
+        érték := ln részsztringe (i + 1)-től
+        dob bad_syntax(ln, _ln_cnt, ln mérete, _file) ha érték utólsó karaktere <> ln[i]
+        chop érték
+        ↑ kulcs, érték
+    e.v.
+
+    érték := ''
+    ciklus amíg i < ln mérete és ln[i] alfanumerikus karakter
+        érékt += ln[i]
+        inc(i)
+    c.v.
+    dob bad_syntax(ln, _ln_cnt, i, _file) ha i <> ln mérete
+    ↑ kulcs, érték
+f.v.
+----
+
+[#type_id_creator]
+==== Típus azonosító hozzárendelés
+
+[listing]
+----
+static next_id: uint_fast32_t = 1
+
+static függv. type_id::make_id_for_type<T>(): uint_fast32_t
+    static típus_azonosító := 0
+    ha típus_azonosító = 0
+        típus_azonosító := next_id
+        inc(next_id)
+    e.v.
+    ↑ típus_azonosító
+f.v.
+----
+
+== Tesztelés
+
+Minden magában tesztelhető modul saját teszteseteket kap.
+Ezek a tesztesetek kerülnek a következőkben listázásra.
+A tesztesetek csak akkor kerülnek lefordításra, ha a `CPORTA` makró definiálva van, különben a normális működést implementáló `main` függvény használatos.
+
+A teszt képes "`ellopni`" a szabványos ki és bemenetet, így a `cli_mode` és `interactive_mode` függvények is tesztelhetőek.
+Ehhez az `std::cout`/`std::cin` folyamok `basic_streambuf` objektumát cseréli sajátjára egy teszt idejére, utána pedig vissza.
+Ez idő alatt generált kimenet egy string objektum formájában ellenőrizhető, illetve szimulálható a bemenet.
+A JPorta bement átirányító rendszere azért nem elegendő, mert külön tesztesetek vannak arra, hogy például a folyam teljesen üres, amit csak akkor lehetne rendesen tesztelni, ha többször lehetne elindítani a programot különböző konfigurációkban.
+Jelentősen egyszerűbb -- és platform független -- megoldás, amit majd ehhez fogok implementálni.
+
+A programhoz használt teszt fájlok megtalálhatóak a <<ap_inputs>> fejezetben.
+
+Jelenleg 429 darab teszteset került definiálásra, melyek teljesen automatikusan lefutnak.
+
+[NOTE]
+Az összes típusok halmaza stem:[cc "T"].
+Az összes beépített cache típusok halmaza stem:[cc "C"].
+
+=== cli_mode függvény
+
+. nem létező fájlra dob `invalid_argument`-et
+. adott egy érvénytelen szintaxisú teszt fájl elérési útvonala, `cli_mode` dob `bad_syntax`-ot
+. adott egy kulcs ismétléses teszt fájl elérési útvonala, `cli_mode` dob `bad_key`-t
+
+Adott egy érvényes teszt fájl:
+
+. nulla kulcsra nem dob
+. nulla kulcsra visszaad nullát
+. nulla kulcsra nem ír ki semmit
+. egy érvényes kulcsra nem dob
+. egy érvényes kulcsra visszaad nullát
+. egy érvényes kulcsra kiírja az értékét
+. több érvényes kulcsra nem dob
+. több érvényes kulcsra visszaad nullát
+. egy érvényes kulcsra kiírja az értékeiket
+. érvénytelen kulcsra dob
+. érvénytelen kulcsra visszaad kettőt
+. érvénytelen kulcsra nem ír ki semmit
+. érvényes kulcsok utáni érvénytelen kulcsnál az azt megelőző kulcsokat kiírja utána nem
+. érvényes kulcsok utáni érvénytelen kulcsnál visszaad kettőt
+
+=== interactive_mode
+
+. nem létező fájlra dob `invalid_argument`-et
+. adott egy érvénytelen szintaxisú teszt fájl elérési útvonala, `cli_mode` dob `bad_syntax`-ot
+. adott egy kulcs ismétléses teszt fájl elérési útvonala, `cli_mode` dob `bad_key`-t
+
+Adott egy érvényes teszt fájl:
+
+. üres bemenetre nem dob
+. üres bemenetre visszaad nullát
+. üres bemenetre nem ír ki semmit
+. egy érvényes kulcsra nem dob
+. egy érvényes kulcsra visszaad nullát
+. egy érvényes kulcsra kiírja az értékét
+. több érvényes kulcsra nem dob
+. több érvényes kulcsra visszaad nullát
+. több érvényes kulcsra kiírja az értékeiket
+. érvénytelen kulcsra nem dob
+. érvénytelen kulcsra visszaad nullát
+. érvénytelen kulcsra nem ír ki semmit
+. érvényes kulcsok utáni érvénytelen kulcsnál az azt megelőző kulcsokat kiírja utána nem
+. érvényes kulcsok utáni érvénytelen kulcsnál visszaad nullát
+
+=== config_set<parser P>
+
+Az adott teszt fájlokkal végrehajtott tesztek egy explicit készített `std::ifstream` objektum átadásával is lefutnak,
+ugyanazokkal a tesztekkel, nyilvánvalóan a fájl név jelenléte helyett az `<unkown file>` szubsztringet ellenőrizzük.
+
+. konstruktor dob `invalid_argument`-et nem létező fájl esetén
+.. a dobott érték `what()` tagfüggvénye tartalmazza a nem létező fájl nevét
+. `broken1.confy` fájlra a konstruktor dob `bad_syntax`-ot
+.. a dobot érték `what()` tagfüggvénye nem nullptr
+.. a dobot érték `what()` tagfüggvénye tartalmazza az átadott fájl nevét
+. `broken2.confy` fájlra a konstruktor dob `bad_syntax`-ot
+.. a dobot érték `what()` tagfüggvénye nem nullptr
+.. a dobot érték `what()` tagfüggvénye tartalmazza az átadott fájl nevét
+. `broken3.confy` fájlra a konstruktor dob `bad_syntax`-ot
+.. a dobot érték `what()` tagfüggvénye nem nullptr
+.. a dobot érték `what()` tagfüggvénye tartalmazza az átadott fájl nevét
+. `broken4.confy` fájlra a konstruktor dob `bad_syntax`-ot
+.. a dobot érték `what()` tagfüggvénye nem nullptr
+.. a dobot érték `what()` tagfüggvénye tartalmazza az átadott fájl nevét
+. `broken5.confy` fájlra a konstruktor dob `bad_syntax`-ot
+.. a dobot érték `what()` tagfüggvénye nem nullptr
+.. a dobot érték `what()` tagfüggvénye tartalmazza az átadott fájl nevét
+. `broken6.confy` fájlra a konstruktor dob `bad_syntax`-ot
+.. a dobot érték `what()` tagfüggvénye nem nullptr
+.. a dobot érték `what()` tagfüggvénye tartalmazza az átadott fájl nevét
+. `key_clash.confy` fájlra a konstruktor dob `bad_key`-ot
+.. a dobot érték `what()` tagfüggvénye nem nullptr
+.. a dobot érték `what()` tagfüggvénye tartalmazza az átadott fájl nevét
+.. a dobot érték `what()` tagfüggvénye tartalmazza, hogy `duplicate key`
+.. a dobot érték `what()` tagfüggvénye tartalmazza, hogy `BROKEN`
+. `empty1.confy` fájlra
+.. a konstruktor nem dob
+.. a `size()` tagfüggvény 0-t ad vissza
+.. a `get<string>("no such key")` tagfüggvény dob `invalid_argument`-et
+. `empty2.confy` fájlra
+.. a konstruktor nem dob
+.. a `size()` tagfüggvény 0-t ad vissza
+.. a `get<string>("no such key")` tagfüggvény dob `invalid_argument`-et
+. `empty3.confy` fájlra
+.. a konstruktor nem dob
+.. a `size()` tagfüggvény 0-t ad vissza
+.. a `get<string>("no such key")` tagfüggvény dob `invalid_argument`-et
+. `bare_words.confy` fájlra
+.. a konstruktor nem dob
+.. a `size()` tagfüggvény 2-t ad vissza
+.. a `get<string>("no such key")` tagfüggvény dob `invalid_argument`-et
+.. a `get<string>("key")` tagfüggvény
+... nem dob
+... visszaad `"bare"`-t
+.. a `get<string>("key2")` tagfüggvény
+... nem dob
+... visszaad `"word"`-t
+. `ints.confy` fájlra
+.. a konstruktor nem dob
+.. a `size()` tagfüggvény 3-t ad vissza
+.. a `get<string>("no such key")` tagfüggvény dob `invalid_argument`-et
+.. a `get<string>("key")` tagfüggvény
+... nem dob
+... visszaad `"1""`-t
+.. a `get<int>("key")` tagfüggvény
+... nem dob
+... visszaad `1`-t
+.. a `get<long long>("keybig")` tagfüggvény
+... nem dob
+... visszaad `8589934592`-t
+. `single-strings.confy` fájlra
+.. a konstruktor nem dob
+.. a `size()` tagfüggvény 4-t ad vissza
+.. a `get<string>("no such key")` tagfüggvény dob `invalid_argument`-et
+.. <az összes érték helyesen kérdezhető le>
+. `double-strings.confy` fájlra
+.. a konstruktor nem dob
+.. a `size()` tagfüggvény 4-t ad vissza
+.. a `get<string>("no such key")` tagfüggvény dob `invalid_argument`-et
+.. <az összes érték helyesen kérdezhető le>
+. `mixed.confy` fájlra
+.. a konstruktor nem dob
+.. a `size()` tagfüggvény 4-t ad vissza
+.. a `get<string>("no such key")` tagfüggvény dob `invalid_argument`-et
+.. <az összes érték helyesen kérdezhető le>
+. `xcolors.confy` fájlra
+.. a konstruktor nem dob
+.. a `size()` tagfüggvény 35-t ad vissza
+.. a `get<string>("no such key")` tagfüggvény dob `invalid_argument`-et
+
+=== confy_parser
+
+. konstruálható egy érvényes fájlal
+. konstruálható egy üres fájlal
+. konstruktor nem dobhat
+. adott üres folyamra, `next_line` `std::nullopt`-t ad vissza
+. adott üres sorokat tartalmazó folyamra, `next_line` `std::nullopt`-t ad vissza
+. adott kommentet tartalmazó folyamra, `next_line` `std::nullopt`-t ad vissza
+. adott egyéb sort tartalmazó folyamra, `next_line` a sort adja vissza
+. adott üres sorra, `parse_line` dob `bad_syntax`-ot
+.. a dobott érték `what()` tagfüggvénye nem nullptr
+.. a dobott érték `what()` tagfüggvénye tartalmazza a parsernek adott fájlt
+.. a dobott érték `what()` tagfüggvénye tartalmazza, hogy ':1:1'
+. adott komment sorra, `parse_line` dob `bad_syntax`-ot
+.. a dobott érték `what()` tagfüggvénye nem nullptr
+.. a dobott érték `what()` tagfüggvénye tartalmazza a parsernek adott fájlt
+.. a dobott érték `what()` tagfüggvénye tartalmazza, hogy ':1:1'
+. adott szóközzel kezdődő sorra, `parse_line` dob `bad_syntax`-ot
+.. a dobott érték `what()` tagfüggvénye nem nullptr
+.. a dobott érték `what()` tagfüggvénye tartalmazza a parsernek adott fájlt
+.. a dobott érték `what()` tagfüggvénye tartalmazza, hogy ':1:1'
+. adott nem betűvel kezdődő kulcsra, `parse_line` dob `bad_syntax`-ot
+.. a dobott érték `what()` tagfüggvénye nem nullptr
+.. a dobott érték `what()` tagfüggvénye tartalmazza a parsernek adott fájlt
+.. a dobott érték `what()` tagfüggvénye tartalmazza, hogy ':1:1'
+. adott nem alfanumerikus kulcsra (`a,b=1`), `parse_line` dob `bad_syntax`-ot
+.. a dobott érték `what()` tagfüggvénye nem nullptr
+.. a dobott érték `what()` tagfüggvénye tartalmazza a parsernek adott fájlt
+.. a dobott érték `what()` tagfüggvénye tartalmazza, hogy ':1:2'
+. adott nem alfanumerikus értékre (`a=,1`), `parse_line` dob `bad_syntax`-ot
+.. a dobott érték `what()` tagfüggvénye nem nullptr
+.. a dobott érték `what()` tagfüggvénye tartalmazza a parsernek adott fájlt
+.. a dobott érték `what()` tagfüggvénye tartalmazza, hogy ':1:3'
+. adott nem befejezett idézőjelő szimpla sztring értékre (`a='b`), `parse_line` dob `bad_syntax`-ot
+.. a dobott érték `what()` tagfüggvénye nem nullptr
+.. a dobott érték `what()` tagfüggvénye tartalmazza a parsernek adott fájlt
+.. a dobott érték `what()` tagfüggvénye tartalmazza, hogy ':1:5'
+. adott nem befejezett idézőjelő dupla sztring értékre (`a="b`), `parse_line` dob `bad_syntax`-ot
+.. a dobott érték `what()` tagfüggvénye nem nullptr
+.. a dobott érték `what()` tagfüggvénye tartalmazza a parsernek adott fájlt
+.. a dobott érték `what()` tagfüggvénye tartalmazza, hogy ':1:5'
+. adott érvényes kulcs/nyers érték sorra, `parse_line` visszaadja
+.. elvárt kulcsot
+.. elvárt értéket
+. adott érvényes kulcs/szimpla sztring sorra, `parse_line` visszaadja
+.. elvárt kulcsot
+.. elvárt értéket
+. adott érvényes kulcs/dupla sztring sorra, `parse_line` visszaadja
+.. elvárt kulcsot
+.. elvárt értéket
+
+=== visitor_base/typed_visitor/visitor
+
+Adott a következő kódrészlet:
+
+[source,cpp]
+----
+struct base_type {
+    virtual void accept(visitor_base&) = 0;
+    virtual ~base_type() = default;
+};
+struct derived1 : base_type {
+    int derived_code() { return 1; }
+    void accept(visitor_base& v) override { v.visit(*this); }
+};
+struct derived2 : base_type {
+    int derived_code() { return 2; }
+    void accept(visitor_base& v) override { v.visit(*this); }
+};
+struct derived_thrower : base_type {
+    int derived_code() { throw std::bad_alloc(); }
+    void accept(visitor_base& v) override { v.visit(*this); }
+};
+
+struct test_visitor : visitor<derived1, derived2, derived_thrower> {
+    void do_visit(derived1& der) { derived_1 += der.derived_code(); }
+    void do_visit(derived2& der) { derived_2 += der.derived_code(); }
+    void do_visit(derived_thrower& der) { derived_3 += der.derived_code(); }
+
+    void reset() noexcept { derived_1 = derived_2 = derived_3 = 0; }
+
+    int derived_1 = 0;
+    int derived_2 = 0;
+    int derived_3 = 0;
+} vtor;
+----
+
+Az egyes tesztesetek után `vtor.reset()` kerül meghívásra.
+
+. `test_visitor` default konstruálható
+. adott `derived1 sut`, `sut.accept(vtor)` nem dob
+. adott `derived1 sut`, `sut.accept(vtor)` után `vtor.derived_1 == sut.derived_code();`
+. adott `derived2 sut`, `sut.accept(vtor)` nem dob
+. adott `derived2 sut`, `sut.accept(vtor)` után `vtor.derived_2 == sut.derived_code();`
+. adott `derived_thrower`, `sut.accept(vtor)` dob `std::bad_alloc`-ot
+. adott `derived_thrower`, `sut.accept(vtor)` után `vtor.derived_3 == 0`
+. adott `derived1 sut`, 3x `sut.accept(vtor)` után `vtor.derived_1 == sut.derived_code() * 3;`
+. adott `base_type* sut`, ami egy `derived1` típust tartalmaz, `sut->accept(vtor)` után  `vtor.derived_1 == 1;`
+
+=== bad_syntax
+
+. `bad_syntax` leszármazottja `std::exception`-nek
+. `bad_syntax` konstruktora nem dobhat
+
+//-
+
+* adott `sut = bad_syntax("erratic line", 42, 69, fs::path("some/file/in/dirs.txt"))`
+. `sut.what()` nem nullptr
+. `sut.what()` tartalmazza `erratic line`-t
+. `sut.what()` tartalmazza `^--HERE`-t
+. `sut.what()` tartalmazza `some/file/in/dirs.txt`-t
+. `sut.what()` tartalmazza `42`-t
+. `sut.what()` tartalmazza `69`-t
+* adott `sut = bad_syntax("erratic line", 42, 69, fs::path())`
+. `sut.what()` nem nullptr
+. `sut.what()` tartalmazza `erratic line`-t
+. `sut.what()` tartalmazza `^--HERE`-t
+. `sut.what()` tartalmazza `<unknown file>`-t
+. `sut.what()` tartalmazza `42`-t
+. `sut.what()` tartalmazza `69`-t
+
+=== bad_key
+
+. `bad_key` leszármazottja `std::exception`-nek
+. `bad_key` konstruktora nem dobhat
+
+// -
+
+* adott `sut = bad_key("my_key", fs::path("some/file/in/dirs.txt"))`
+. `sut.what()` nem nullptr
+. `sut.what()` tartalmazza `some/file/in/dirs.txt`-t
+. `sut.what()` tartalmazza `my_key`-t
+. `sut.what()` tartalmazza `repeated`-t
+* adott `sut = bad_key("my_key", fs::path())`
+. `sut.what()` nem nullptr
+. `sut.what()` tartalmazza `<unkown file>`-t
+. `sut.what()` tartalmazza `my_key`-t
+. `sut.what()` tartalmazza `repeated`-t
+
+=== cache_factory<T>/cache_visitor_for<T>
+
+==== string-szerű T-kre
+
+Ha `T` `std::string`, `std::string_view`, vagy `const char*` akkor a következők tesztelhetőek:
+
+. `cache_factory<T>::make` létezik `const std::string&` paraméterrel
+. `cache_factory<T>::make` konstans
+. `cache_factory<T>::make` `T`-t ad vissza
+. adott `std::string s` valamely értékkel és `cache_factory<T> sut`, `sut.make(s)` == `s`
+
+==== egyéb T-kre
+
+[NOTE]
+====
+Ezek a tesztek a következő típusokra futnak le: `char`, `signed char`, `unsigned char`, `short`, `unsigned short`, `int`, `unsigned`, `long`, `unsigned long`, `long long`, `unsigned long long` -- ezekre érvényes sztring bemenet: `vs = "42"˙`; `float`, `double`, `long double` -- ezekre érvényes sztring bemenet: `vs = "4.2"`; és `bool` -- erre érvényes bement: `vs = "1"`.
+
+Az érvénytelen string bemenet minden T-re `is = "#"`.
+====
+
+. adott `cache_visitor_for<T> vtor` default konstruálható, ez a következőkben is létezik
+. `vtor.valid()` hamis
+
+. adott `cache_factory<T> sut`, `sut.construct(is)` a nullptr
+. adott `cache_factory<T> sut`, `sut.construct(vs)` nem nullptr
+. adott `cache_factory<T> sut`, `sut.construct(vs)->accept(vtor)` után `vtor.valid()` igaz
+. adott `cache_factory<T> sut`, `sut.construct(vs)->accept(vtor)` után `vtor.value()` == `T(érvényes bemenet konstans)`
+
+=== *_cache típusok
+
+[NOTE]
+Ezek a tesztek az összes beépített cache típusra lefutnak.
+
+. adott stem:[C in cc "C"], a hozzá tartozó bemenet literáljával konstruálható
+. adott stem:[C in cc "C"], a hozzá tartozó bemenet std::move-olt változójával konstruálható
+. adott stem:[C in cc "C"], a `get_value_ptr` tagfüggvény konstans
+. adott stem:[C in cc "C"], a `get_value_ptr` tagfüggvény visszatérési típusa konstansra mutató
+. adott stem:[C in cc "C"] ami literállal lett konstruálva, a `get_value_ptr` értéke nem nullptr
+. adott stem:[C in cc "C"] ami std::move-al lett konstruálva, a `get_value_ptr` értéke nem nullptr
+. adott stem:[C in cc "C"] ami literállal lett konstruálva, `get_value_ptr` nem dob kivételt
+. adott stem:[C in cc "C"] ami std::move-al lett konstruálva, `get_value_ptr` nem dob kivételt
+. adott stem:[C in cc "C"] ami std::move-al lett konstruálva, a `get_value_ptr` visszaadott pointer nem egyezik meg a bemenetre mutató pointer értékével
+
+=== type_id
+
+. adott stem:[T in cc "T"], type_id nemnulla értéked ad
+. adott stem:[T,U in cc "T" (T != U)], type_id különböző értékeket ad
+. adott stem:[T in cc "T"], type_id kétszer ugyan azt az értéked adja
+. adott stem:[T in cc "T"], type_id == tagfüggvénye konstans
+. adott stem:[T in cc "T"], type_id =! tagfüggvénye konstans
+. adott stem:[T in cc "T"], type_id == tagfüggvénye nem dobhat
+. adott stem:[T in cc "T"], type_id =! tagfüggvénye nem dobhat
+
+[#ap_inputs]
+[appendix]
+== Bemeneti fájlok
+
+A tesztelés közben a következő fájlok kerülnek felhasználásra.
+
+.broken1.confy
+[listing]
+----
+include::../test/inputs/broken1.confy[]
+----
+
+.broken2.confy
+[listing]
+----
+include::../test/inputs/broken2.confy[]
+----
+
+.broken3.confy
+[listing]
+----
+include::../test/inputs/broken3.confy[]
+----
+
+.broken4.confy
+[listing]
+----
+include::../test/inputs/broken4.confy[]
+----
+
+.broken5.confy
+[listing]
+----
+include::../test/inputs/broken5.confy[]
+----
+
+.broken6.confy
+[listing]
+----
+include::../test/inputs/broken6.confy[]
+----
+
+.key_clash.confy
+[listing]
+----
+include::../test/inputs/key_clash.confy[]
+----
+
+.empty1.confy
+[listing]
+----
+include::../test/inputs/empty1.confy[]
+----
+
+.empty2.confy
+[listing]
+----
+include::../test/inputs/empty2.confy[]
+----
+
+.empty3.confy
+[listing]
+----
+include::../test/inputs/empty3.confy[]
+----
+
+.base_words.confy
+[listing]
+----
+include::../test/inputs/bare_words.confy[]
+----
+
+.ints.confy
+[listing]
+----
+include::../test/inputs/ints.confy[]
+----
+
+.single-strings.confy
+[listing]
+----
+include::../test/inputs/single-strings.confy[]
+----
+
+.double-strings.confy
+[listing]
+----
+include::../test/inputs/double-strings.confy[]
+----
+
+.mixed.confy
+[listing]
+----
+include::../test/inputs/mixed.confy[]
+----
+
+.xcolors.confy
+[listing]
+----
+include::../test/inputs/xcolors.confy[]
 ----

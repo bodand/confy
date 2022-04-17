@@ -1,0 +1,419 @@
+@startuml
+left to right direction
+skinparam DefaultFontName "IBMPlexSerif"
+
+class type_id {
+ + {static} id_of<T>() noexcept: type_id
+ + operator==(other: const type_id&) const noexcept: bool
+ + operator!=(other: const type_id&) const noexcept: bool
+---
+ - type_id(val: std::uint_fast32_t) noexcept
+ - _value: std::uint_fast32_t
+ - {static} next_id: std::uint_fast32_t = 1
+ - {static} make_id_for_type<T>(counter: std::uint_fast32_t&) noexcept: std::uint_fast32_t
+}
+
+class "parser<class T>" as parser_concept << (ℭ,#44fcf0) concept >> {
+ + T().next_line(std::istream&) -> std::optional<std::string>
+ + T().parse_line(std::string_view) -> std::pair<std::string, std::string>
+}
+
+class "cachable<class T>" as cachable_concept << (ℭ,#44fcf0) concept >> {
+ + typename cache_factory<T>::cache_type
+ + cache_factory<T>().construct(const std::string&) -> std::unique_ptr<cache>
+}
+
+class confy_parser {
+ + confy_parser(file: const std::filesystem::path&) noexcept
+ + next_line(strm: std::istream&) const: std::optional<std::string>
+ + parse_line(ln: std::string_view) const: std::pair<std::string, std::string>
+---
+ - _ln_cnt: int
+ - _file: const std::filesystem::path&
+}
+
+confy_parser ..+ parser_concept
+config_set #-- parser_concept : megköveteli P-re
+cachable_concept <-- config
+
+abstract visitor_base {
+ + visit(visited: T*): void
+ + {abstract} ~visitor_base() noexcept
+---
+ # {abstract} visit_typeless(erased_visited: void*, tid: type_id): void = 0
+}
+
+abstract "typed_visitor<class T>" as visitor_impl << (T,#ff8800) >> {
+ + {abstract} do_visit(T&): void = 0
+ + {abstract} ~typed_visitor() noexcept
+}
+
+visitor_base <|-- visitor_impl : <<virtual>>
+
+abstract "visitor<class ...Ts>" as visitor << (T,#ff8800) >> {
+ + {abstract} ~visitor() noexcept
+---
+ # visit_typeless(erased_visited: void*, tid: type_id) <<final>>: void
+---
+ - try_visit<T>(erased_visited: void*, tid: type_id): bool
+}
+
+visitor_impl  <|-- visitor: (minden T eleme Ts...): typed_visitor<T>-ből öröklődik
+
+class "cache_visitor_for<cachable T>" as cache_visitor_for << (T,#ff8800) >> {
+ + using cache_type = typename cache_factory<T>::cache_type
+ + do_visit(cache: cache_type&) <<final>>: void
+ + valid() const noexcept: bool
+ + value() const noexcept: const T&
+---
+ - _cache_ptr: const T*
+}
+
+visitor <|-- cache_visitor_for : <<final>> Ts... = {T}
+cache_visitor_for <-- config
+cache_visitor_for #-- cachable_concept : megköveteli T-re
+
+type_id <-- visitor_base
+type_id <-- visitor
+
+class "config_set<parser P>" as config_set << (T,#ff8800) >> {
+ + config_set(file: const std::filesystem::path&)
+ + config_set(strm: std::istream&)
+ + get<T>(key: std::string_view) const: ...
+ + size() const noexcept: std::size_t
+---
+ - emplace_config(name: std::string&&, value: std::string&&): void
+ - std::filesystem::path _file
+ - std::vector<config> _configs
+}
+
+object "std::exception" as std_exc
+
+bad_syntax <.. confy_parser
+bad_syntax --|> std_exc
+
+bad_key <.. config_set
+bad_key --|> std_exc
+
+class bad_syntax {
+ + bad_syntax(line: std::string, ln: int, col: int, file: std::filesystem::path) noexcept
+ + what() noexcept <<override>>: const char*
+---
+ - _buf: std::string
+ - _line: std::string
+ - _ln: int
+ - _col: int
+ - _file: std::filesystem::path
+}
+
+class bad_key {
+ + bad_key(key: std::string, file: std::filesystem::path) noexcept
+ + what() noexcept <<override>>: const char*
+---
+ - _buf: std::string
+ - _key: std::string
+ - _file: std::filesystem::path
+}
+
+class config {
+ + config(name: std::string, value: std::string)
+ + get_key() const noexcept: std::string_view
+ + get_as<T>() const: ...
+---
+ - _name: std::string
+ - _value: std::string
+ - <<mutable>> _last_cached: std::unique_ptr<cache>
+}
+
+class char_cache {
+ + char_cache(char&&) noexcept
+ + get_value_ptr(): const char*
+---
+ - _value: char
+}
+class schar_cache {
+ + schar_cache(signed char&&) noexcept
+ + get_value_ptr(): const signed char*
+---
+ - _value: signed char
+}
+class short_cache {
+ + short_cache(short&&) noexcept
+ + get_value_ptr(): const short*
+---
+ - _value: short
+}
+class int_cache {
+ + int_cache(int&&) noexcept
+ + get_value_ptr(): const int*
+---
+ - _value: int
+}
+class long_cache {
+ + long_cache(long&&) noexcept
+ + get_value_ptr(): const long*
+---
+ - _value: long
+}
+class long_long_cache {
+ + long_long_cache(long long&&) noexcept
+ + get_value_ptr(): const long long*
+---
+ - _value: long long
+}
+class uchar_cache {
+ + uchar_cache(unsigned char&&) noexcept
+ + get_value_ptr(): const unsigned char*
+---
+ - _value: unsigned char
+}
+class ushort_cache {
+ + ushort_cache(unsigned short&&) noexcept
+ + get_value_ptr(): const unsigned short*
+---
+ - _value: unsigned short
+}
+class uint_cache {
+ + uint_cache(unsigned&&) noexcept
+ + get_value_ptr(): const unsigned*
+---
+ - _value: unsigned
+}
+class ulong_cache {
+ + ulong_cache(unsigned long&&) noexcept
+ + get_value_ptr(): const unsigned long*
+---
+ - _value: unsigned long
+}
+class ulong_long_cache {
+ + ulong_long_cache(unsigned long long&&) noexcept
+ + get_value_ptr(): const unsigned long long*
+---
+ - _value: unsigned long long
+}
+class float_cache {
+ + float_cache(float&&) noexcept
+ + get_value_ptr(): const float*
+---
+ - _value: float
+}
+class double_cache {
+ + double_cache(double&&) noexcept
+ + get_value_ptr(): const double*
+---
+ - _value: double
+}
+class long_double_cache {
+ + long_double_cache(long double&&) noexcept
+ + get_value_ptr(): const long double*
+---
+ - _value: long double
+}
+class bool_cache {
+ + bool_cache(bool&&) noexcept
+ + get_value_ptr(): const bool*
+---
+ - _value: bool
+}
+
+config_set *..> "*" config
+config *- "1..0" cache
+
+visitable_cache  <|-- char_cache: <<final>>\nD = char_cache
+visitable_cache  <|-- schar_cache: <<final>>\nD = schar_cache
+visitable_cache  <|-- short_cache: <<final>>\nD = short_cache
+visitable_cache  <|-- int_cache: <<final>>\nD = int_cache
+visitable_cache  <|-- long_cache: <<final>>\nD = long_cache
+visitable_cache  <|-- long_long_cache: <<final>>\nD = long_long_cache
+
+visitable_cache  <|-- uchar_cache: <<final>>\nD = uchar_cache
+visitable_cache  <|-- ushort_cache: <<final>>\nD = ushort_cache
+visitable_cache  <|-- uint_cache: <<final>>\nD = uint_cache
+visitable_cache  <|-- ulong_cache: <<final>>\nD = ulong_cache
+visitable_cache  <|-- ulong_long_cache: <<final>>\nD = ulong_long_cache
+
+visitable_cache  <|-- float_cache: <<final>>\nD = float_cache
+visitable_cache  <|-- double_cache: <<final>>\nD = double_cache
+visitable_cache  <|-- long_double_cache: <<final>>\nD = long_double_cache
+
+visitable_cache  <|-- bool_cache: <<final>>\nD = bool_cache
+
+class "cache_factory<class T>" as generic_cache_fact << (T,#ff8800) >>
+
+class "cache_factory<const char*>" as cstr_cache_fact {
+ + make(data: const std::string&): const char*
+}
+class "cache_factory<std::string_view>" as sv_cache_fact {
+ + make(data: const std::string&) const: std::string_view
+}
+class "cache_factory<std::string>" as str_cache_fact {
+ + make(data: const std::string&) const: std::string
+}
+class "cache_factory<bool>" as bool_cache_fact {
+ + using cache_type = bool_cache;
+ + construct(data: const std::string&): std::unique_ptr<cache>
+}
+class "cache_factory<char>" as char_cache_fact {
+ + using cache_type = char_cache;
+ + construct(data: const std::string&): std::unique_ptr<cache>
+}
+class "cache_factory<signed char>" as schar_cache_fact {
+ + using cache_type = schar_cache;
+ + construct(data: const std::string&): std::unique_ptr<cache>
+}
+class "cache_factory<unsigned char>" as uchar_cache_fact {
+ + using cache_type = uchar_cache;
+ + construct(data: const std::string&): std::unique_ptr<cache>
+}
+class "cache_factory<short>" as short_cache_fact {
+ + using cache_type = short_cache;
+ + construct(data: const std::string&): std::unique_ptr<cache>
+}
+class "cache_factory<unsigned short>" as ushort_cache_fact {
+ + using cache_type = ushort_cache;
+ + construct(data: const std::string&): std::unique_ptr<cache>
+}
+class "cache_factory<int>" as int_cache_fact {
+ + using cache_type = int_cache;
+ + construct(data: const std::string&): std::unique_ptr<cache>
+}
+class "cache_factory<unsigned>" as uint_cache_fact {
+ + using cache_type = uint_cache;
+ + construct(data: const std::string&): std::unique_ptr<cache>
+}
+class "cache_factory<long>" as long_cache_fact {
+ + using cache_type = long_cache;
+ + construct(data: const std::string&): std::unique_ptr<cache>
+}
+class "cache_factory<unsigned long>" as ulong_cache_fact {
+ + using cache_type = ulong_cache;
+ + construct(data: const std::string&): std::unique_ptr<cache>
+}
+class "cache_factory<long long>" as long_long_cache_fact {
+ + using cache_type = long_long_cache;
+ + construct(data: const std::string&): std::unique_ptr<cache>
+}
+class "cache_factory<unsigned long long>" as ulong_long_cache_fact {
+ + using cache_type = ulong_long_cache;
+ + construct(data: const std::string&): std::unique_ptr<cache>
+}
+class "cache_factory<float>" as float_cache_fact {
+ + using cache_type = float_cache;
+ + construct(data: const std::string&): std::unique_ptr<cache>
+}
+class "cache_factory<double>" as double_cache_fact {
+ + using cache_type = double_cache;
+ + construct(data: const std::string&): std::unique_ptr<cache>
+}
+class "cache_factory<long double>" as long_double_cache_fact {
+ + using cache_type = long_double_cache;
+ + construct(data: const std::string&): std::unique_ptr<cache>
+}
+
+generic_cache_fact <- config
+generic_cache_fact <|.. cstr_cache_fact
+generic_cache_fact <|.. sv_cache_fact
+generic_cache_fact <|.. str_cache_fact
+
+note as NoCacheNote
+Mivel sztringként tároljuk az adatokat, ezek a "cache factory"k nem készítenek
+soha cache objektumokat, nincs is `construct` tagfüggvényük.
+Helyette a `make` tagfüggvényt definiálják, mellyel cachelés nélkül lehet
+létrehozni egy adott objektumot.
+end note
+cstr_cache_fact -[dotted]- NoCacheNote
+sv_cache_fact -[dotted]- NoCacheNote
+str_cache_fact -[dotted]- NoCacheNote
+
+generic_cache_fact <|.. bool_cache_fact
+bool_cache <.. bool_cache_fact
+
+generic_cache_fact <|.. char_cache_fact
+generic_cache_fact <|.. schar_cache_fact
+generic_cache_fact <|.. uchar_cache_fact
+char_cache <.. char_cache_fact
+schar_cache <.. schar_cache_fact
+uchar_cache <.. uchar_cache_fact
+
+generic_cache_fact <|.. short_cache_fact
+generic_cache_fact <|.. ushort_cache_fact
+short_cache <.. short_cache_fact
+ushort_cache <.. ushort_cache_fact
+
+generic_cache_fact <|.. int_cache_fact
+generic_cache_fact <|.. uint_cache_fact
+int_cache <.. int_cache_fact
+uint_cache <.. uint_cache_fact
+
+generic_cache_fact <|.. long_cache_fact
+generic_cache_fact <|.. ulong_cache_fact
+long_cache <.. long_cache_fact
+ulong_cache <.. ulong_cache_fact
+
+generic_cache_fact <|.. long_long_cache_fact
+generic_cache_fact <|.. ulong_long_cache_fact
+long_long_cache <.. long_long_cache_fact
+ulong_long_cache <.. ulong_long_cache_fact
+
+generic_cache_fact <|.. float_cache_fact
+generic_cache_fact <|.. double_cache_fact
+generic_cache_fact <|.. long_double_cache_fact
+float_cache <.. float_cache_fact
+double_cache <.. double_cache_fact
+long_double_cache <.. long_double_cache_fact
+
+class "visitable_cache<class D>" as visitable_cache << (T,#ff8800) >> {
+ + accept(visitor: visitor_base&) <<override>>: void
+ + {abstract} ~visitable_cache() noexcept
+}
+
+cache <|-- visitable_cache
+
+abstract cache {
+ + {abstract} accept(visitor_base&): void = 0
+ + {abstract} ~cache() noexcept
+}
+
+package Jelmagyarázat <<Rectangle>> {
+    note as NotationNote
+        A diagram tartalmaz pár nem szokványos jelölést:
+        1. A Gamma, Helm, Johnson és Vlissides-féle "Design Patterns" c. könyv
+           által használt szaggatott szimpla nyíl, mely az objektum kreációt
+           jelenti, miszerint egy objektum hoz létre egy másikat.
+        2. A szaggatott üres fejű nyíl, a sablon specializációt takarja magában.
+        3. A C++20-as szabvánnyal bevezetett koncepciók (concept) jelölései,
+           mivel UML egyáltalán nem támogat semmi hasonlót.
+           Egy koncepció <color:#44fcf0>világos kék</color> színű, és a fraktúr
+           nagy C betűt használja: ℭ.
+           Ilyenkor az felsorolt kifejezések pszeudókód a koncepció által
+           megnevezett feltételekre.
+        4. Egy koncepció megkövetelése esetén a megkövetelő osztály egy üres
+           négyzettel végződő nyíllal van összekötve a koncepcióval.
+           A sablon paramétert, amelyre megköveteli a koncepció igaz voltát
+           az a nyíl törzsére van írva.
+        5. Egy koncepciót teljesítő osztály egy bekarikázott plusz szimbólummal
+           jelzi egy szaggatott nyíl felé mutató végén.
+    end note
+
+    object Létrehozó
+    object Specializáció
+
+    object Termék
+    object Sablon
+
+    class Koncepció << (ℭ,#44fcf0) concept >>
+    object Megkövetelő
+    object Teljesítő
+
+    Termék <. Létrehozó
+    Sablon <|. Specializáció
+
+    Koncepció -# Megkövetelő
+    Koncepció .left+ Teljesítő
+
+    Létrehozó -[hidden]up Koncepció
+}
+
+hide empty members
+
+@enduml

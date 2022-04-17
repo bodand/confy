@@ -88,3 +88,4 @@ $RECYCLE.BIN/
 *.msp
 *.lnk
 _build*/
+_Deparsed_XSubs.pm
