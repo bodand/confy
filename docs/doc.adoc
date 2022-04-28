@@ -1034,6 +1034,8 @@ Ezek a tesztek az összes beépített cache típusra lefutnak.
 . adott stem:[T \in \mathcal{T}], type_id == tagfüggvénye nem dobhat
 . adott stem:[T \in \mathcal{T}], type_id =! tagfüggvénye nem dobhat
 
+include::{doxydoc}[]
+
 [#ap_inputs]
 [appendix]
 == Bemeneti fájlok
