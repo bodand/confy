@@ -162,11 +162,31 @@ sub format_class :prototype($_) {
   my $is_template = exists $class->{template_parameters};
   my @tparams = ();
   if ($is_template) {
-    for my $tparam ($class->{template_parameters}->@*) {
-      push @tparams, {
-          name => $tparam->{name} // 'unnamed',
-          type => $tparam->{type},
-          doc  => [ { type => 'text', content => 'PLACEHOLDER' } ] # TODO
+    my %tmplt_type_table = ();
+    for my $tmpl ($class->{template_parameters}->@*) {
+      my $name;
+      if (exists $tmpl->{declaration_name}) {
+        $name = $tmpl->{declaration_name}
+      }
+      else {
+        $tmpl->{type} =~ s/(\w+)\z//;
+        $name = $1;
+      }
+      $tmplt_type_table{$name} = $tmpl->{type}
+    }
+
+    for my $doc ($class->{detailed}{doc}->@*) {
+      next unless exists $doc->{templateparam};
+      my @tpars = $doc->{templateparam}->@*;
+
+      for my $tpar (@tpars) {
+        my $tparam = {
+            name => $tpar->{parameters}[0]{name},
+            type => 'class',
+            doc  => $tpar->{doc}
+        };
+
+        push @tparams, $tparam
       }
     }
   }
@@ -190,7 +210,8 @@ $base= Synopsis
 [source,cpp]
 ----
 #include <$class->{includes}{name}>
-
+@{[ $is_template ? "\ntemplate<" . join(', ', map { format_targument } @tparams) . ">"
+                 : "" ]}
 $class->{kind} $class->{name}@{[ exists($class->{base}) ? " : " . join(',', map {format_base} $class->{base}->@*) : "" ]};
 ----@{[ render_text $class->{brief}{doc} ]}
 @{[ $is_template ? "\n$base= Template arguments\n\n" . format_tparams(@tparams) . "\n"
@@ -210,7 +231,7 @@ EOF
 sub format_base :prototype(_) {
   my ($base) = @_;
   my $virt = '';
-  $virt = 'virtual' unless $base->{virtualness} eq 'non_virtual';
+  $virt = 'virtual ' unless $base->{virtualness} eq 'non_virtual';
   return "$base->{protection} $virt$base->{name}"
 }
 
