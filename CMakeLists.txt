@@ -7,9 +7,16 @@ project(confy CXX)
 
 ## confy EXECUTABLE ##
 
-add_executable(confy src/type_id.hpp src/type_id.cpp src/visitor.hpp src/visitor.cpp src/bad_key.cpp src/bad_key.hpp src/bad_syntax.cpp src/bad_syntax.hpp test/capture_stdio.hpp)
+add_executable(confy src/type_id.hpp src/type_id.cpp src/visitor.hpp src/visitor.cpp src/bad_key.cpp src/bad_key.hpp src/bad_syntax.cpp src/bad_syntax.hpp test/capture_stdio.hpp src/cachable.hpp src/cache_visitor.cpp src/cache_visitor_for.hpp src/caches.cpp src/caches.hpp src/cache_factory.cpp src/cache_factory.hpp test/test.bad_key.cpp test/gtest_lite.h src/memtrace.h src/memtrace.cpp
+               test/test.bad_syntax.cpp test/test_main.cpp test/test.visitor.cpp test/test.type_id.cpp test/test.cache.cpp test/call_tuple.hpp test/test.uncached.cachefactory.cpp
+               test/test.cached.cachefactory.cpp
+               src/parser.hpp src/confy_parser.cpp src/confy_parser.hpp test/test.confy_parser.cpp)
 target_compile_definitions(confy PRIVATE -DMEMTRACE)
 target_compile_features(confy PRIVATE cxx_std_20)
+target_include_directories(confy PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+target_compile_options(confy PRIVATE
+                       $<$<CXX_COMPILER_ID:GCC,Clang>:-Wall -Wextra -Wpedantic>
+                       $<$<CXX_COMPILER_ID:MSVC>:/W4 /permissive->)
 
 ## DOCUMENTATION ##
 

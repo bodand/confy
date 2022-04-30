@@ -1,6 +1,6 @@
 = confy, A confy projekt dokumentációja
 Bodor András - YZBQWV
-2, {docdate}: A programozás alapjai 2. 2021/2022/2 félév nagy házi feladat
+3, {docdate}: A programozás alapjai 2. 2021/2022/2 félév nagy házi feladat
 :title-separator: ,
 :version-label: Revízió
 :email: bodand@pm.me
@@ -704,7 +704,7 @@ Jelentősen egyszerűbb -- és platform független -- megoldás, amit majd ehhez
 
 A programhoz használt teszt fájlok megtalálhatóak a <<ap_inputs>> fejezetben.
 
-Jelenleg 429 darab teszteset került definiálásra, melyek teljesen automatikusan lefutnak.
+Jelenleg 428 darab teszteset került definiálásra, melyek teljesen automatikusan lefutnak.
 
 [NOTE]
 Az összes típusok halmaza stem:[\mathcal{T}].
@@ -905,15 +905,15 @@ struct base_type {
 };
 struct derived1 : base_type {
     int derived_code() { return 1; }
-    void accept(visitor_base& v) override { v.visit(*this); }
+    void accept(visitor_base& v) override { v.visit(this); }
 };
 struct derived2 : base_type {
     int derived_code() { return 2; }
-    void accept(visitor_base& v) override { v.visit(*this); }
+    void accept(visitor_base& v) override { v.visit(this); }
 };
 struct derived_thrower : base_type {
     int derived_code() { throw std::bad_alloc(); }
-    void accept(visitor_base& v) override { v.visit(*this); }
+    void accept(visitor_base& v) override { v.visit(this); }
 };
 
 struct test_visitor : visitor<derived1, derived2, derived_thrower> {
@@ -928,6 +928,9 @@ struct test_visitor : visitor<derived1, derived2, derived_thrower> {
     int derived_3 = 0;
 } vtor;
 ----
+
+NOTE: R3 javítás: A visit függvény egy pointert vesz át, nem egy referenciát.
+A `v.visit(*this)` hívások átírva `v.visit(this)`-re.
 
 Az egyes tesztesetek után `vtor.reset()` kerül meghívásra.
 
@@ -1026,13 +1029,15 @@ Ezek a tesztek az összes beépített cache típusra lefutnak.
 
 === type_id
 
-. adott stem:[T \in \mathcal{T}], type_id nemnulla értéked ad
 . adott stem:[T,U \in \mathcal{T},\;T \ne U], type_id különböző értékeket ad
 . adott stem:[T \in \mathcal{T}], type_id kétszer ugyan azt az értéked adja
 . adott stem:[T \in \mathcal{T}], type_id == tagfüggvénye konstans
 . adott stem:[T \in \mathcal{T}], type_id =! tagfüggvénye konstans
 . adott stem:[T \in \mathcal{T}], type_id == tagfüggvénye nem dobhat
 . adott stem:[T \in \mathcal{T}], type_id =! tagfüggvénye nem dobhat
+
+NOTE: R3 javítás: Eredeti első teszt eset törölve, nem ellenőrizhető az erős típushelyesség megtöréséhez szükséges függvények biztosítása nélkül.
+Ezt nem szeretnénk sose támogatni, így a tesztet töröljük.
 
 include::{doxydoc}[]
 

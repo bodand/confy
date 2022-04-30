@@ -57,7 +57,7 @@ sub filter_classnames :prototype(_) {
 }
 
 sub filter_files :prototype(_) {
-  return $_[0]{name} !~ /gtest_lite/;
+  return $_[0]{name} !~ /gtest/;
 }
 
 sub filter_functions :prototype(_) {
@@ -199,7 +199,8 @@ sub format_class :prototype($_) {
 
   for my $lvl (qw/public protected private/) {
     next unless exists $class->{"${lvl}_methods"};
-    $functions{$lvl} = "\n" . join "\n", map {format_function $base_lvl + 2, $_, $class->{name}} $class->{"${lvl}_methods"}{members}->@*;
+    my $doc = ucfirst $lvl;
+    $functions{$lvl} = "\n$base= $doc members\n" . join "\n", map {format_function $base_lvl + 2, $_, $class->{name}} $class->{"${lvl}_methods"}{members}->@*;
   }
 
   return <<"EOF";
@@ -218,11 +219,9 @@ $class->{kind} $class->{name}@{[ exists($class->{base}) ? " : " . join(',', map 
                  : ""]}
 $base= Description@{[ render_text $class->{detailed}{doc} ]}
 
-$base= Public members$functions{public}
-
-$base= Protected members$functions{protected}
-
-$base= Private members$functions{private}
+$functions{public}
+$functions{protected}
+$functions{private}
 
 EOF
 
@@ -279,6 +278,16 @@ sub render_text :prototype($) {
       url      => sub {
         my ($args) = @_; # TODO properly implement
         return $args->{content}
+      },
+      list     => sub {
+        my ($args) = @_;
+        my $item = $args->{style} eq 'itemized' ? '* ' : '. ';
+
+        my $joined = "\n";
+        for my $elem ($args->{content}->@*) {
+          $joined .= $item . render_text($elem) . "\n";
+        }
+        $joined .= "\n";
       },
       style    => sub {
         my ($args) = @_;

@@ -63,8 +63,10 @@ struct type_id {
      * \return The type_id object created for the type T.
      */
     template<class T>
-    type_id
-    id_of() noexcept;
+    static type_id
+    id_of() noexcept {
+        return type_id(make_type_id<T>(type_cntr));
+    }
 
     /**
      * \brief The equality operator for type_id objects
@@ -100,6 +102,29 @@ private:
      * \param val The integer id value to assign to this object. Refers to a singular
      */
     explicit type_id(std::uint_fast32_t val) noexcept;
+
+    std::uint_fast32_t _value;                      ///< The value of the current type_id object
+    inline static std::uint_fast32_t type_cntr = 1; ///< The next to be assigned value
+
+    /**
+     * \brief Generates the next type id
+     *
+     * Takes the static counter value as a reference, and checks if it was already instantiated for
+     * that T type.
+     * If it has, it returns the stored value, otherwise, it takes the value of the counter, and
+     * stores its value for later use, then increments the counter.
+     *
+     * \tparam T The type to get the id for
+     * \param cnt The static counter for type id assignments
+     * \return The unique numeric id for the type
+     */
+    template<class T>
+    static std::uint_fast32_t
+    make_type_id(std::uint_fast32_t& cnt) {
+        static std::uint_fast32_t value = 0;
+        if (value == 0) value = cnt++;
+        return value;
+    }
 };
 
 #endif

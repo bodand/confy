@@ -72,7 +72,9 @@ struct visitor_base {
      */
     template<class T>
     void
-    visit(T* visited);
+    visit(T* visited) {
+        visit_typeless(visited, type_id::id_of<T>());
+    }
 
     /**
      * \brief Defaulted virtual destructor
@@ -151,6 +153,29 @@ struct visitor : typed_visitor<Ts>... {
 
 protected:
     /**
+     * \brief Tries visiting for T
+     *
+     * This function takes a type_id and checks if it matches with the given T type's identifier.
+     * If it does, it performs a cast on ourselves to the appropriate visitor type and visits it,
+     * returning true.
+     * Otherwise it returns false.
+     *
+     * This function is usually chained using parameter unpacking using logical OR.
+     *
+     * \tparam T The type to visit the object as.
+     * \param typeless_visited The type erased object to visit.
+     * \param tid The type_id of the original type of the object.
+     * \return Whether the visitation could have been performed.
+     */
+    template<class T>
+    bool
+    try_visit(void* typeless_visited, const type_id& tid) {
+        if (type_id::id_of<T>() != tid) return false;
+        static_cast<typed_visitor<T>*>(this)->do_visit(*static_cast<T*>(typeless_visited));
+        return true;
+    }
+
+    /**
      * \brief Implemented typeless visitor internal.
      *
      * This class is the one in the hierarchy that implements the type erased visitor internal
@@ -163,7 +188,9 @@ protected:
      * \param tid The type_id value of the object's actual type.
      */
     void
-    visit_typeless(void* erased_visited, type_id tid) final;
+    visit_typeless(void* erased_visited, type_id tid) final {
+        (try_visit<Ts>(erased_visited, tid) || ...);
+    }
 };
 
 #endif
