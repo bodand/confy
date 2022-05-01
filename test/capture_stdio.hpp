@@ -45,6 +45,18 @@
 #include <streambuf>
 #include <string_view>
 
+namespace {
+    template<auto Strm>
+    struct stream_resetter {
+        void
+        operator()(std::streambuf* buf) const {
+            Strm->rdbuf(buf);
+        }
+    };
+    template<auto Strm>
+    using reset_stream = std::unique_ptr<std::streambuf, stream_resetter<Strm>>;
+}
+
 /**
  * \brief A function to feed input to an std::istream.
  *
@@ -66,7 +78,13 @@
  */
 template<std::istream* IStrm, class Fn, class... Args>
 void
-feed_stream(std::string_view data, Fn&& fn, Args&&... args);
+feed_stream(std::string_view data, Fn&& fn, Args&&... args) {
+    std::istringstream ss({data.data(), data.size()});
+    { // REDIRECTION SCOPE
+        auto buf_buf = reset_stream<IStrm>(IStrm->rdbuf(ss.rdbuf()));
+        std::forward<Fn>(fn)(std::forward<Args>(args)...);
+    }
+}
 
 /**
  * \brief A function to capture output to an std::ostream.
@@ -90,6 +108,13 @@ feed_stream(std::string_view data, Fn&& fn, Args&&... args);
  */
 template<std::ostream* OStrm, class Fn, class... Args>
 std::string
-capture_stream(Fn&& fn, Args&&... args);
+capture_stream(Fn&& fn, Args&&... args) {
+    std::ostringstream ss;
+    { // REDIRECTION SCOPE
+        auto buf_buf = reset_stream<OStrm>(OStrm->rdbuf(ss.rdbuf()));
+        std::forward<Fn>(fn)(std::forward<Args>(args)...);
+    }
+    return ss.str();
+}
 
 #endif

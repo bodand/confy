@@ -28,7 +28,64 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * src/cache_visitor_for.cpp --
- *   Implements cache_visitor_for's functionality.
+ * src/config.hpp --
+ *   XXX file description missing
  */
-#include "cache_visitor_for.hpp"
+
+/**
+ * \file config.hpp
+ * \brief A single configuration entry
+ *
+ * This file defines the config class, which stores a single key-value entry.
+ */
+
+#ifndef CONFY_CONFIG_HPP
+#define CONFY_CONFIG_HPP
+
+#include <memory>
+#include <string>
+#include <string_view>
+
+/**
+ * \brief Key-value config entry
+ *
+ * A class that stores a single key-value entry in the system.
+ */
+struct config {
+    /**
+     * \brief Constructs a key-value entry
+     *
+     * Takes a key and value pair, and creates a valid config entry for storage.
+     *
+     * \param name The key part of the entry
+     * \param value The value part of the entry
+     */
+    config(std::string name, std::string value);
+
+    /**
+     * \brief Returns the key
+     *
+     * A getter for the key part of the configuration entry.
+     *
+     * \return The name of the entry
+     */
+    [[nodiscard]] std::string_view
+    get_key() const noexcept;
+
+    /**
+     * \brief Get the value of the entry
+     *
+     * A getter for the configuration entry.
+     * The value is parsed into the requested type.
+     * Caching is implemented, so multiple queries to the same type will not calculate the process
+     * again, if asked in direct succession.
+     *
+     * \tparam T The type to parse the value into
+     * \return The parsed value
+     */
+    template<class T>
+    [[nodiscard]] std::conditional_t<std::is_trivially_copyable_v<T>, T, const T&>
+    get_as() const;
+};
+
+#endif

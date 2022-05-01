@@ -27,56 +27,45 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * src/user_modes.hpp --
+ *   XXX file descritption missing
  */
 
 /**
- * \file test_main.cpp
- * \brief The test entry point
- *
- * This file defines the main function to be used while testing.
+ * \file user_modes.hpp
+ * \brief Declares the two functions handling user interaction
  */
 
-#ifdef CPORTA
-#  define CONFY_TESTING
-#endif
+#ifndef CONFY_USER_MODES_HPP
+#define CONFY_USER_MODES_HPP
 
-#ifdef CONFY_TESTING
-#  define test_main main
-#endif
+#include <filesystem>
+#include <span>
+#include <string_view>
 
-void
-test_bad_key();
-void
-test_bad_syntax();
-void
-test_caches();
-void
-test_cached_cache_factory();
-void
-test_config_set();
-void
-test_confy_parser();
-void
-test_type_id();
-void
-test_uncached_cache_factory();
-void
-test_user_modes();
-void
-test_visitors();
-
+/**
+ * \brief The interactive user mode function
+ *
+ * This function implements the functionality of a user-interactive session.
+ *
+ * \param cfg_file The configuration file to use
+ * \return Exit code
+ */
 int
-test_main() {
-    test_bad_key();
-    test_bad_syntax();
-    test_caches();
-    test_cached_cache_factory();
-    test_config_set();
-    test_confy_parser();
-    test_type_id();
-    test_uncached_cache_factory();
-    test_user_modes();
-    test_visitors();
+interactive_mode(const std::filesystem::path& cfg_file);
 
-    return 0;
-}
+/**
+ * \brief The command line user mode function
+ *
+ * This function implements the mode, where the user provides the keys they want on the command line
+ * and we just print the values back to them without further interaction.
+ *
+ * \param cfg_file The configuration file to use
+ * \param keys The set of keys to read
+ * \return Exit code
+ */
+int
+cli_mode(const std::filesystem::path& cfg_file, std::span<std::string_view> keys);
+
+#endif

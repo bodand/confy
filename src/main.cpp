@@ -30,10 +30,8 @@
  */
 
 /**
- * \file test_main.cpp
- * \brief The test entry point
- *
- * This file defines the main function to be used while testing.
+ * \file main.cpp
+ * \brief The main entry point to a non-test build
  */
 
 #ifdef CPORTA
@@ -41,42 +39,36 @@
 #endif
 
 #ifdef CONFY_TESTING
-#  define test_main main
+#  define main not_main_anymore
 #endif
 
-void
-test_bad_key();
-void
-test_bad_syntax();
-void
-test_caches();
-void
-test_cached_cache_factory();
-void
-test_config_set();
-void
-test_confy_parser();
-void
-test_type_id();
-void
-test_uncached_cache_factory();
-void
-test_user_modes();
-void
-test_visitors();
+#include <exception>
+#include <iostream>
+#include <string_view>
+#include <vector>
+
+#include "user_modes.hpp"
 
 int
-test_main() {
-    test_bad_key();
-    test_bad_syntax();
-    test_caches();
-    test_cached_cache_factory();
-    test_config_set();
-    test_confy_parser();
-    test_type_id();
-    test_uncached_cache_factory();
-    test_user_modes();
-    test_visitors();
+main(int argc, char** argv) try {
+    if (argc >= 3) {
+        std::vector<std::string_view> args(argv + 2,
+                                           argv + argc - 2);
+        return cli_mode(argv[1], args);
+    }
 
-    return 0;
+    std::filesystem::path cfg_file;
+    if (argc == 2) {
+        cfg_file = argv[1];
+    } else {
+        std::cout << "Which configuration file would you like to use?\n";
+        std::string file_buf;
+        std::getline(std::cin, file_buf);
+        cfg_file = file_buf;
+        if (!std::filesystem::exists(cfg_file)) return 1;
+    }
+    return interactive_mode(cfg_file);
+} catch (const std::exception& ex) {
+    std::cerr << ex.what() << "\n";
+    return -1;
 }

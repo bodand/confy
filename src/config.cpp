@@ -30,53 +30,8 @@
  */
 
 /**
- * \file test_main.cpp
- * \brief The test entry point
- *
- * This file defines the main function to be used while testing.
+ * \file config.cpp
+ * \brief This file implements the functions of the config class.
  */
 
-#ifdef CPORTA
-#  define CONFY_TESTING
-#endif
-
-#ifdef CONFY_TESTING
-#  define test_main main
-#endif
-
-void
-test_bad_key();
-void
-test_bad_syntax();
-void
-test_caches();
-void
-test_cached_cache_factory();
-void
-test_config_set();
-void
-test_confy_parser();
-void
-test_type_id();
-void
-test_uncached_cache_factory();
-void
-test_user_modes();
-void
-test_visitors();
-
-int
-test_main() {
-    test_bad_key();
-    test_bad_syntax();
-    test_caches();
-    test_cached_cache_factory();
-    test_config_set();
-    test_confy_parser();
-    test_type_id();
-    test_uncached_cache_factory();
-    test_user_modes();
-    test_visitors();
-
-    return 0;
-}
+#include "config.hpp"

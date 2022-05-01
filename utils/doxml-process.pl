@@ -98,6 +98,9 @@ sub format_function :prototype($_;$) {
       elsif ($tparam->{name} eq 'OStrm') {
         $tparam->{type} = 'std::ostream*';
       }
+      elsif ($tparm->{name} eq 'I') {
+        $tparam->{type} = 'int';
+      }
       ##### DANGER PASSED #####
 
       push @tparams, $tparam
