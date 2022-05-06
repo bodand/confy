@@ -40,9 +40,16 @@
 #ifndef CONFY_USER_MODES_HPP
 #define CONFY_USER_MODES_HPP
 
-#include <filesystem>
-#include <span>
-#include <string_view>
+#ifndef CPORTA
+#  include <filesystem>
+#  include <span>
+#  include <string_view>
+#else
+#  include <experimental/string_view>
+#  define string_view experimental::string_view
+#  include <experimental/filesystem>
+#  define filesystem experimental::filesystem
+#endif
 
 /**
  * \brief The interactive user mode function
@@ -55,6 +62,12 @@
 int
 interactive_mode(const std::filesystem::path& cfg_file);
 
+#ifdef CPORTA
+using cli_keys_t = const std::vector<std::string_view>&;
+#else
+using cli_keys_t = std::span<std::string_view>;
+#endif
+
 /**
  * \brief The command line user mode function
  *
@@ -66,6 +79,6 @@ interactive_mode(const std::filesystem::path& cfg_file);
  * \return Exit code
  */
 int
-cli_mode(const std::filesystem::path& cfg_file, std::span<std::string_view> keys);
+cli_mode(const std::filesystem::path& cfg_file, cli_keys_t keys);
 
 #endif

@@ -44,6 +44,9 @@
 #  define test_main main
 #endif
 
+/**
+ * \brief bad_key class tests
+ */
 void
 test_bad_key();
 void

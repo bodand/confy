@@ -31,6 +31,8 @@
 
 #include "bad_key.hpp"
 
+#include "memtrace.h"
+
 /**
  * \file bad_key.cpp
  * \brief Implements the bad_key.hpp file's non-template functions
@@ -39,3 +41,17 @@
  * bad_key.
  */
 
+const char*
+bad_key::what() const noexcept {
+    return _buf.c_str();
+}
+
+bad_key::bad_key(std::string key, std::filesystem::path file) noexcept
+     : _buf(),
+       _key(std::move(key)),
+       _file(std::move(file)) {
+    std::ostringstream ss;
+    ss << (_file.empty() ? "<unknown file>" : _file) << ": "
+       << "duplicate key: " << _key << " has been repeated.\n";
+    _buf = ss.str();
+}

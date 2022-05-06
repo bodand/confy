@@ -35,7 +35,12 @@
  */
 
 #include <exception>
-#include <filesystem>
+#ifdef CPORTA
+#  include <experimental/filesystem>
+#  define filesystem experimental::filesystem
+#else
+#  include <filesystem>
+#endif
 #include <type_traits>
 
 #include "caches.hpp"
@@ -46,68 +51,77 @@ using namespace std::literals;
 #include "gtest_lite.h"
 
 namespace {
+#ifndef CPORTA
     template<class T>
     concept const_get_value_ptr = requires(const T t) {
                                       { t.get_value_ptr() };
                                   };
+#endif
 
-    template<class C, class T, int I>
+    template<class C, class T, class I>
     struct do_test {
-        explicit do_test(tlist<C, T, int_t<I>>) { }
+        explicit do_test(tlist<C, T, I>) { }
 
         void
         operator()() const {
             /* the TEST macro doesn't suffice in these repeated list places,
              * just like Google test is garbage, needless macro spam seemingly yet again didn't lead
              * us to anywhere we wanted to go to; just use Boost.uT */
-            gtest_lite::test.begin(("cache.static_checks#" + std::to_string(I)).c_str());
+            gtest_lite::test.begin(("cache.static_checks#" + std::to_string(I::value)).c_str());
             {
-                EXPECT_TRUE((std::is_constructible_v<C, T&&>) );
-                EXPECT_TRUE((std::is_constructible_v<C, decltype(std::move(std::declval<T>()))>) );
+                EXPECT_TRUE((std::is_constructible<C, T&&>::value));
+                EXPECT_TRUE((std::is_constructible<C, decltype(std::move(std::declval<T>()))>::value));
+#ifndef CPORTA
                 EXPECT_TRUE(const_get_value_ptr<C>);
-                EXPECT_TRUE(std::is_const_v<std::remove_pointer_t<decltype(std::declval<C>().get_value_ptr())>>);
+#endif
+                EXPECT_TRUE(std::is_const<std::remove_pointer_t<decltype(std::declval<C>().get_value_ptr())>>::value);
             }
             gtest_lite::test.end();
 
-            gtest_lite::test.begin(("cache.literal_value#" + std::to_string(I)).c_str());
+            gtest_lite::test.begin(("cache.literal_value#" + std::to_string(I::value)).c_str());
             {
                 auto lit = C(static_cast<T&&>(1));
-                EXPECT_NE(lit.get_value_ptr(), nullptr);
+                EXPECT_TRUE(lit.get_value_ptr() != nullptr);
                 EXPECT_NO_THROW(lit.get_value_ptr());
             }
             gtest_lite::test.end();
 
-            gtest_lite::test.begin(("cache.moved_value#" + std::to_string(I)).c_str());
+            gtest_lite::test.begin(("cache.moved_value#" + std::to_string(I::value)).c_str());
             {
                 T val = 0;
                 auto mv = C(std::move(val));
-                EXPECT_NE(mv.get_value_ptr(), nullptr);
+                EXPECT_TRUE(mv.get_value_ptr() != nullptr);
                 EXPECT_NO_THROW(mv.get_value_ptr());
-                EXPECT_NE(mv.get_value_ptr(), &val);
+                EXPECT_TRUE(mv.get_value_ptr() != &val);
             }
             gtest_lite::test.end();
         }
     };
+
+    template<class... Args>
+    do_test<Args...>
+    make_test(tlist<Args...> typs) {
+        return do_test<Args...>(typs);
+    }
 }
 
 void
 test_caches() {
-    auto tests = std::tuple{
-           do_test(tlist<char_cache, char, int_t<1>>()),
-           do_test(tlist<uchar_cache, unsigned char, int_t<2>>()),
-           do_test(tlist<schar_cache, signed char, int_t<3>>()),
-           do_test(tlist<short_cache, short, int_t<4>>()),
-           do_test(tlist<ushort_cache, unsigned short, int_t<5>>()),
-           do_test(tlist<int_cache, int, int_t<6>>()),
-           do_test(tlist<uint_cache, unsigned, int_t<7>>()),
-           do_test(tlist<long_cache, long, int_t<8>>()),
-           do_test(tlist<ulong_cache, unsigned long, int_t<9>>()),
-           do_test(tlist<long_long_cache, long long, int_t<10>>()),
-           do_test(tlist<ulong_long_cache, unsigned long long, int_t<11>>()),
-           do_test(tlist<float_cache, float, int_t<12>>()),
-           do_test(tlist<double_cache, double, int_t<13>>()),
-           do_test(tlist<long_double_cache, long double, int_t<14>>()),
-           do_test(tlist<bool_cache, bool, int_t<15>>()),
-    };
+    auto tests = std::make_tuple(
+           make_test(tlist<char_cache, char, int_t<1>>()),
+           make_test(tlist<uchar_cache, unsigned char, int_t<2>>()),
+           make_test(tlist<schar_cache, signed char, int_t<3>>()),
+           make_test(tlist<short_cache, short, int_t<4>>()),
+           make_test(tlist<ushort_cache, unsigned short, int_t<5>>()),
+           make_test(tlist<int_cache, int, int_t<6>>()),
+           make_test(tlist<uint_cache, unsigned, int_t<7>>()),
+           make_test(tlist<long_cache, long, int_t<8>>()),
+           make_test(tlist<ulong_cache, unsigned long, int_t<9>>()),
+           make_test(tlist<long_long_cache, long long, int_t<10>>()),
+           make_test(tlist<ulong_long_cache, unsigned long long, int_t<11>>()),
+           make_test(tlist<float_cache, float, int_t<12>>()),
+           make_test(tlist<double_cache, double, int_t<13>>()),
+           make_test(tlist<long_double_cache, long double, int_t<14>>()),
+           make_test(tlist<bool_cache, bool, int_t<15>>()));
     call_tuple(tests);
 }

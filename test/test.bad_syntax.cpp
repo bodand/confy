@@ -35,7 +35,6 @@
  */
 
 #include <exception>
-#include <filesystem>
 #include <string>
 #include <type_traits>
 
@@ -48,8 +47,9 @@ using namespace std::literals;
 void
 test_bad_syntax() {
     TEST(bad_syntax, static_checks) {
-        EXPECT_TRUE((std::is_base_of_v<std::exception, bad_syntax>) );
-        EXPECT_TRUE((std::is_nothrow_constructible_v<bad_syntax, std::string, std::filesystem::path>) );
+        EXPECT_TRUE((std::is_base_of<std::exception, bad_syntax>::value) );
+        using fs_path = std::filesystem::path; // gtest_lite macros do not expand their parameters
+        EXPECT_TRUE((std::is_nothrow_constructible<bad_syntax, std::string, int, int, fs_path>::value) );
     }
     END
 
@@ -57,7 +57,7 @@ test_bad_syntax() {
         auto sut = bad_syntax("erratic line", 42, 69, std::filesystem::path("some/file/in/dirs.txt"));
 
         auto err = sut.what();
-        EXPECT_NE(nullptr, err);
+        EXPECT_TRUE(nullptr != err);
         if (!err) return;
 
         auto err_str = std::string(err);
@@ -78,7 +78,7 @@ test_bad_syntax() {
         auto sut = bad_syntax("erratic line", 42, 69, std::filesystem::path());
 
         auto err = sut.what();
-        EXPECT_NE(nullptr, err);
+        EXPECT_TRUE(nullptr != err);
         if (!err) return;
 
         auto err_str = std::string(err);

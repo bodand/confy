@@ -35,8 +35,19 @@
  */
 
 #include <exception>
-#include <filesystem>
+#ifdef CPORTA
+#  include <experimental/filesystem>
+#  define filesystem experimental::filesystem
+#else
+#  include <filesystem>
+#endif
 #include <string>
+#ifndef CPORTA
+#  include <string_view>
+#else
+#  include <experimental/string_view>
+#  define string_view experimental::string_view
+#endif
 #include <type_traits>
 
 #include "bad_key.hpp"
@@ -87,9 +98,11 @@ test_user_modes() {
                     "empty3.confy"s,
              }) {
             auto written = capture_stream<&std::cout>([&file] {
-                EXPECT_EQ(interactive_mode(file), 0);
+                feed_stream<&std::cin>("", [&file] {
+                    EXPECT_EQ(interactive_mode(file), 0);
+                });
             });
-            EXPECT_EQ(written, "");
+            EXPECT_TRUE(written.empty());
         }
     }
     END
@@ -103,19 +116,21 @@ test_user_modes() {
             auto written = capture_stream<&std::cout>([&file] {
                 EXPECT_EQ(cli_mode(file, {}), 0);
             });
-            EXPECT_EQ(written, "");
+            EXPECT_TRUE(written.empty());
         }
     }
     END
 
     TEST(user_modes, inter_single_key) {
-        for (auto&& [file, value] : {
-                    std::pair{"bare_words.confy"s, "bare"s},
-                    {"double-strings.confy"s, "some"s},
-                    {"ints.confy"s, "1"s},
-                    {"mixed.confy"s, "nothing"s},
-                    {"single-strings.confy"s, "some"s},
+        for (auto&& data : {
+                    std::make_pair("bare_words.confy"s, "bare"s),
+                    std::make_pair("double-strings.confy"s, "some"s),
+                    std::make_pair("ints.confy"s, "1"s),
+                    std::make_pair("mixed.confy"s, "nothing"s),
+                    std::make_pair("single-strings.confy"s, "some"s),
              }) {
+            auto&& file = data.first;
+            auto&& value = data.second;
             auto written = capture_stream<&std::cout>([file = file] {
                 feed_stream<&std::cin>("key\n", [&file] {
                     int r;
@@ -123,38 +138,43 @@ test_user_modes() {
                     EXPECT_EQ(r, 0);
                 });
             });
-            EXPECT_EQ(written, value);
+            EXPECT_EQ(written, value + "\n");
         }
     }
     END
 
     TEST(user_modes, cli_single_key) {
-        for (auto&& [file, value] : {
-                    std::pair{"bare_words.confy"s, "bare"s},
-                    {"double-strings.confy"s, "some"s},
-                    {"ints.confy"s, "1"s},
-                    {"mixed.confy"s, "nothing"s},
-                    {"single-strings.confy"s, "some"s},
+        for (auto&& data : {
+                    std::make_pair("bare_words.confy"s, "bare"s),
+                    std::make_pair("double-strings.confy"s, "some"s),
+                    std::make_pair("ints.confy"s, "1"s),
+                    std::make_pair("mixed.confy"s, "nothing"s),
+                    std::make_pair("single-strings.confy"s, "some"s),
              }) {
+            auto&& file = data.first;
+            auto&& value = data.second;
             auto written = capture_stream<&std::cout>([file = file] {
-                auto keys = std::vector{"key"sv};
+                std::vector<std::string_view> keys{"key"};
                 int r;
                 EXPECT_NO_THROW(r = cli_mode(file, keys));
                 EXPECT_EQ(r, 0);
             });
-            EXPECT_EQ(written, value);
+            EXPECT_EQ(written, value + "\n");
         }
     }
     END
 
     TEST(user_modes, inter_multi_key) {
-        for (auto&& [file, key1, key2] : {
-                    std::tuple{"bare_words.confy"s, "bare"s, "word"s},
-                    {"double-strings.confy"s, "some"s, "have space"s},
-                    {"ints.confy"s, "1"s, "2"s},
-                    {"mixed.confy"s, "nothing"s, "tests"s},
-                    {"single-strings.confy"s, "some"s, "have space"s},
+        for (auto&& data : {
+                    std::make_tuple("bare_words.confy"s, "bare"s, "word"s),
+                    std::make_tuple("double-strings.confy"s, "some"s, "have space"s),
+                    std::make_tuple("ints.confy"s, "1"s, "2"s),
+                    std::make_tuple("mixed.confy"s, "nothing"s, "tests"s),
+                    std::make_tuple("single-strings.confy"s, "some"s, "have space"s),
              }) {
+            auto&& file = std::get<0>(data);
+            auto&& key1 = std::get<1>(data);
+            auto&& key2 = std::get<2>(data);
             auto written = capture_stream<&std::cout>([file = file] {
                 feed_stream<&std::cin>("key\nkey2", [&file] {
                     int r;
@@ -162,26 +182,29 @@ test_user_modes() {
                     EXPECT_EQ(r, 0);
                 });
             });
-            EXPECT_EQ(written, key1 + "\n" + key2);
+            EXPECT_EQ(written, key1 + "\n" + key2 + "\n");
         }
     }
     END
 
     TEST(user_modes, cli_multi_key) {
-        for (auto&& [file, key1, key2] : {
-                    std::tuple{"bare_words.confy"s, "bare"s, "word"s},
-                    {"double-strings.confy"s, "some"s, "have space"s},
-                    {"ints.confy"s, "1"s, "2"s},
-                    {"mixed.confy"s, "nothing"s, "tests"s},
-                    {"single-strings.confy"s, "some"s, "have space"s},
+        for (auto&& data : {
+                    std::make_tuple("bare_words.confy"s, "bare"s, "word"s),
+                    std::make_tuple("double-strings.confy"s, "some"s, "have space"s),
+                    std::make_tuple("ints.confy"s, "1"s, "2"s),
+                    std::make_tuple("mixed.confy"s, "nothing"s, "tests"s),
+                    std::make_tuple("single-strings.confy"s, "some"s, "have space"s),
              }) {
+            auto&& file = std::get<0>(data);
+            auto&& key1 = std::get<1>(data);
+            auto&& key2 = std::get<2>(data);
             auto written = capture_stream<&std::cout>([file = file] {
-                auto keys = std::vector{"key"sv, "key2"sv};
+                std::vector<std::string_view> keys{"key", "key2"};
                 int r;
                 EXPECT_NO_THROW(r = cli_mode(file, keys));
                 EXPECT_EQ(r, 0);
             });
-            EXPECT_EQ(written, key1 + "\n" + key2);
+            EXPECT_EQ(written, key1 + "\n" + key2 + "\n");
         }
     }
     END
@@ -194,14 +217,20 @@ test_user_modes() {
                     "mixed.confy"s,
                     "single-strings.confy"s,
              }) {
-            auto written = capture_stream<&std::cout>([&file] {
+            std::ignore = capture_stream<&std::cout>([&file] {
                 feed_stream<&std::cin>("doesntexist\n", [&file] {
-                    int r;
-                    EXPECT_NO_THROW(r = interactive_mode(file));
-                    EXPECT_EQ(r, 0);
+                    try {
+                        int r = interactive_mode(file);
+                        EXPECT_EQ(r, 0);
+                    } catch (...) { }
                 });
             });
-            EXPECT_EQ(written, "");
+            auto written = capture_stream<&std::cout>([&file] {
+                feed_stream<&std::cin>("doesntexist\n", [&file] {
+                    EXPECT_THROW(interactive_mode(file), const std::out_of_range&);
+                });
+            });
+            EXPECT_TRUE(written.empty());
         }
     }
     END
@@ -214,52 +243,70 @@ test_user_modes() {
                     "mixed.confy"s,
                     "single-strings.confy"s,
              }) {
-            auto written = capture_stream<&std::cout>([&file] {
-                auto keys = std::vector{"doesntexist"sv};
-                int r;
-                EXPECT_NO_THROW(r = cli_mode(file, keys));
-                EXPECT_EQ(r, 2);
+            std::vector<std::string_view> keys{"doesntexist"};
+            std::ignore = capture_stream<&std::cout>([&keys, &file] {
+                std::ignore = capture_stream<&std::cerr>([&keys, &file] { // silence stderr
+                    int r = cli_mode(file, keys);
+                    EXPECT_EQ(r, 2);
+                });
             });
-            EXPECT_EQ(written, "");
+            auto written = capture_stream<&std::cout>([&keys, &file] {
+                std::ignore = capture_stream<&std::cerr>([&keys, &file] { // silence stderr
+                    EXPECT_NO_THROW(cli_mode(file, keys));
+                });
+            });
+            EXPECT_TRUE(written.empty());
         }
     }
     END
 
     TEST(user_modes, inter_trailing_invalid_key) {
-        for (auto&& [file, value] : {
-                    std::pair{"bare_words.confy"s, "bare"s},
-                    {"double-strings.confy"s, "some"s},
-                    {"ints.confy"s, "1"s},
-                    {"mixed.confy"s, "nothing"s},
-                    {"single-strings.confy"s, "some"s},
+        for (auto&& data : {
+                    std::make_pair("bare_words.confy"s, "bare"s),
+                    std::make_pair("double-strings.confy"s, "some"s),
+                    std::make_pair("ints.confy"s, "1"s),
+                    std::make_pair("mixed.confy"s, "nothing"s),
+                    std::make_pair("single-strings.confy"s, "some"s),
              }) {
-            auto written = capture_stream<&std::cout>([file = file] {
+            auto&& file = data.first;
+            auto&& value = data.second;
+            std::ignore = capture_stream<&std::cout>([file = file] {
                 feed_stream<&std::cin>("key\nerroneous", [&file] {
-                    int r;
-                    EXPECT_NO_THROW(r = interactive_mode(file));
-                    EXPECT_EQ(r, 0);
+                    try {
+                        int r = interactive_mode(file);
+                        EXPECT_EQ(r, 0);
+                    } catch (...) { }
                 });
             });
-            EXPECT_EQ(written, value);
+            auto written = capture_stream<&std::cout>([file = file] {
+                feed_stream<&std::cin>("key\nerroneous", [&file] {
+                    EXPECT_THROW(interactive_mode(file), const std::out_of_range&);
+                });
+            });
+            EXPECT_EQ(written, value + "\n");
         }
     }
     END
 
     TEST(user_modes, cli_trailing_invalid_key) {
-        for (auto&& [file, value] : {
-                    std::pair{"bare_words.confy"s, "bare"s},
-                    {"double-strings.confy"s, "some"s},
-                    {"ints.confy"s, "1"s},
-                    {"mixed.confy"s, "nothing"s},
-                    {"single-strings.confy"s, "some"s},
+        for (auto&& data : {
+                    std::make_pair("bare_words.confy"s, "bare"s),
+                    std::make_pair("double-strings.confy"s, "some"s),
+                    std::make_pair("ints.confy"s, "1"s),
+                    std::make_pair("mixed.confy"s, "nothing"s),
+                    std::make_pair("single-strings.confy"s, "some"s),
              }) {
-            auto written = capture_stream<&std::cout>([file = file] {
-                auto keys = std::vector{"key"sv, "doesntexist"sv};
-                int r;
-                EXPECT_NO_THROW(r = cli_mode(file, keys));
+            auto&& file = data.first;
+            auto&& value = data.second;
+            std::vector<std::string_view> keys{"key", "doesntexist"};
+            std::ignore = capture_stream<&std::cout>([&keys, file = file] {
+                int r = cli_mode(file, keys);
                 EXPECT_EQ(r, 2);
             });
-            EXPECT_EQ(written, value);
+            auto written = capture_stream<&std::cout>([&keys, file = file] {
+                EXPECT_NO_THROW(cli_mode(file, keys));
+            });
+            EXPECT_EQ(written, value + "\n");
         }
     }
     END

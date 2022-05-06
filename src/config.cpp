@@ -35,3 +35,10 @@
  */
 
 #include "config.hpp"
+
+config::config(std::string name, std::string value)
+     : _name(std::move(name)),
+       _value(std::move(value)) { }
+
+std::string_view
+config::get_key() const noexcept { return _name; }

@@ -42,12 +42,30 @@
 #ifndef CONFY_CONFIG_SET_HPP
 #define CONFY_CONFIG_SET_HPP
 
-#include <filesystem>
-#include <istream>
-#include <string>
-#include <string_view>
+#ifdef CPORTA
+#  include <experimental/filesystem>
+#  include <experimental/string_view>
+#  define string_view experimental::string_view
+#  define filesystem experimental::filesystem
+#else
+#  include <filesystem>
+#  include <string_view>
+#endif
 
+#include <cstring>
+#include <fstream>
+#include <istream>
+#include <numeric>
+#include <string>
+#include <vector>
+
+#include "bad_key.hpp"
+#include "config.hpp"
 #include "parser.hpp"
+
+#ifdef CPORTA
+#  define parser class
+#endif
 
 /**
  * \brief The class collecting a file's worth of configurations
@@ -70,7 +88,13 @@ struct config_set {
      *
      * \param file The configuration file
      */
-    config_set(const std::filesystem::path& file);
+    explicit config_set(const std::filesystem::path& file)
+         : _file(file) {
+        std::ifstream ifs(file);
+        if (!ifs.is_open())
+            throw std::invalid_argument("invalid_file " + _file.string());
+        parse_stream(ifs);
+    }
 
     /**
      * \brief Reads the configuration from a stream
@@ -81,11 +105,27 @@ struct config_set {
      *
      * \param strm The stream to read from
      */
-    config_set(std::istream& strm);
+    explicit config_set(std::istream& strm) {
+        parse_stream(strm);
+    }
 
     template<class T>
-    [[nodiscard]] std::conditional_t<std::is_trivially_copyable_v<T>, T, const T&>
-    get(std::string_view key) const;
+    auto
+    get(std::string_view key) const {
+        const auto& cfg = _configs;
+
+        return callback_binary_search(
+               _configs,
+               [&key](const config& cfg) {
+                   return std::strcmp(cfg.get_key().data(), key.data());
+               },
+               [&cfg](std::size_t, std::size_t middle, std::size_t) -> decltype(auto) {
+                   return cfg[middle].template get_as<T>();
+               },
+               [&key](auto&&...) -> T {
+                   throw std::out_of_range("invalid key looked up: " + std::string(key));
+               });
+    }
 
     /**
      * \brief Getter for the size of the configuration set
@@ -94,8 +134,85 @@ struct config_set {
      *
      * \return The size of the configuration set
      */
-    [[nodiscard]] std::size_t
-    size() const noexcept;
+    std::size_t
+    size() const noexcept { return _configs.size(); }
+
+private:
+    void
+    parse_stream(std::istream& strm) {
+        auto parse = P(_file);
+        std::optional<std::string> maybe_next_ln;
+        while ((maybe_next_ln = parse.next_line(strm))) {
+            auto next_ln = maybe_next_ln.value();
+            auto conf = parse.parse_line(next_ln);
+            emplace_config(std::move(conf.first), std::move(conf.second));
+        }
+    }
+
+    /**
+     * \brief Universal callback-based binary search
+     *
+     * A callback oriented binary search. Searches the given vec vector and calls succ if it
+     * successfully finds an equal value, according to the given unary predicate cmpr.
+     * If it doesn't find anything searched, it calls fail.
+     * In all cases returns the return values of the callbacks, so they must have an equal return
+     * type.
+     *
+     * \tparam T The type of the container to search.
+     * \tparam CmprFn The type of the comparison unary predicate.
+     * \tparam SuccFn The type of the success function.
+     * \tparam FailFn The type of the failure function.
+     * \param vec The container to search in. Requires to have random access support.
+     * \param cmpr The unary predicate, that provides three way comparison.
+     * \param succ The function called if the search succeeds.
+     * \param fail The function called if the search fails.
+     * \return The return value of the called completion function.
+     */
+    template<class T, class CmprFn, class SuccFn, class FailFn>
+    static auto
+    callback_binary_search(const T& vec,
+                           CmprFn&& cmpr,
+                           SuccFn&& succ,
+                           FailFn&& fail) {
+        std::size_t begin = 0;
+        std::size_t middle;
+        std::size_t end = vec.size();
+        while (begin != end) {
+#ifndef CPORTA
+            middle = std::midpoint(begin, end);
+#else
+            middle = (end + begin) / 2;
+#endif
+            auto dir = std::forward<CmprFn>(cmpr)(vec[middle]);
+            if (dir == 0) {
+                return std::forward<SuccFn>(succ)(begin, middle, end);
+            } else if (dir < 0) {
+                begin = middle + 1;
+            } else if (dir > 0) {
+                end = middle;
+            }
+        }
+        return std::forward<FailFn>(fail)(begin, middle, end);
+    }
+
+    void
+    emplace_config(std::string&& name, std::string&& value) {
+        callback_binary_search(
+               _configs,
+               [&name](const config& cfg) {
+                   // C++20: cfg.get_key() <=> name;
+                   return std::strcmp(cfg.get_key().data(), name.c_str());
+               },
+               [&name, this](auto...) {
+                   throw bad_key(name, _file);
+               },
+               [this, &name, &value](std::size_t, std::size_t, std::size_t end) {
+                   _configs.emplace(std::next(_configs.begin(), static_cast<std::ptrdiff_t>(end)), name, value);
+               });
+    }
+
+    std::filesystem::path _file{}; ///< The currently used file's path
+    std::vector<config> _configs;  ///< The set of configurations stored
 };
 
 #endif

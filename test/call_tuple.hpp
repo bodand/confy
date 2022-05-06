@@ -27,9 +27,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
- * test/inputs/type_iteration.hpp --
- *   XXX file descritption missing
  */
 
 #ifndef CONFY_TYPE_ITERATION_HPP
@@ -56,6 +53,7 @@ struct int_t {
     constexpr auto const static value = I;
 };
 
+#ifndef CPORTA
 /**
  * \brief Implementation function for call_tuple.
  *
@@ -71,6 +69,26 @@ call_tuple_impl(const T& t, std::index_sequence<Is...>) {
     using std::get; // two-step ADL dance
     (((get<Is>(t)()), void()), ...);
 }
+#else
+template<class, class>
+struct call_tuple_impl { };
+
+template<class T, std::size_t I, std::size_t... Is>
+struct call_tuple_impl<T, std::index_sequence<I, Is...>> {
+    static void
+    call(const T& t) {
+        using std::get;
+        get<I>(t)();
+        call_tuple_impl<T, std::index_sequence<Is...>>::call(t);
+    }
+};
+
+template<class T>
+struct call_tuple_impl<T, std::index_sequence<>> {
+    static void
+    call(const T&) { }
+};
+#endif
 
 /**
  * \brief Calls each elem in a tuple
@@ -83,7 +101,11 @@ call_tuple_impl(const T& t, std::index_sequence<Is...>) {
 template<class T>
 void
 call_tuple(const T& t) {
+#ifndef CPORTA
     call_tuple_impl(t, std::make_index_sequence<std::tuple_size_v<T>>());
+#else
+    call_tuple_impl<T, std::make_index_sequence<std::tuple_size<T>::value>>::call(t);
+#endif
 }
 
 #endif

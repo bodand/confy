@@ -39,12 +39,23 @@
 #ifndef CONFY_PARSER_HPP
 #define CONFY_PARSER_HPP
 
-#include <concepts>
+#ifndef CPORTA
+#  include <concepts>
+#endif
 #include <istream>
-#include <optional>
 #include <string>
-#include <string_view>
+#ifndef CPORTA
+#  include <optional>
+#  include <string_view>
+#else
+#  include <experimental/optional>
+#  include <experimental/string_view>
+#  define string_view experimental::string_view
+#  define optional experimental::optional
+#endif
 #include <type_traits>
+
+#ifndef CPORTA
 
 /**
  * \brief The parser concept
@@ -59,5 +70,7 @@ concept parser = requires(T t) {
                      { t.next_line(std::declval<std::istream&>()) } -> std::same_as<std::optional<std::string>>;
                      { t.parse_line(std::declval<std::string_view>()) } -> std::same_as<std::pair<std::string, std::string>>;
                  };
+
+#endif
 
 #endif

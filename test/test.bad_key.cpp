@@ -35,7 +35,6 @@
  */
 
 #include <exception>
-#include <filesystem>
 #include <string>
 #include <type_traits>
 
@@ -48,8 +47,8 @@ using namespace std::literals;
 void
 test_bad_key() {
     TEST(bad_key, static_checks) {
-        EXPECT_TRUE((std::is_base_of_v<std::exception, bad_key>) );
-        EXPECT_TRUE((std::is_nothrow_constructible_v<bad_key, std::string, std::filesystem::path>) );
+        EXPECT_TRUE((std::is_base_of<std::exception, bad_key>::value) );
+        EXPECT_TRUE((std::is_nothrow_constructible<bad_key, std::string, std::filesystem::path>::value) );
     }
     END
 
@@ -58,7 +57,7 @@ test_bad_key() {
         auto sut = bad_key("my_key", std::filesystem::path("some/file/in/dirs.txt"));
 
         auto err = sut.what();
-        EXPECT_NE(nullptr, err);
+        EXPECT_TRUE(nullptr != err);
         if (!err) return;
 
         auto err_str = std::string(err);
@@ -77,7 +76,7 @@ test_bad_key() {
         auto sut = bad_key("my_key", std::filesystem::path());
 
         auto err = sut.what();
-        EXPECT_NE(nullptr, err);
+        EXPECT_TRUE(nullptr != err);
         if (!err) return;
 
         auto err_str = std::string(err);

@@ -40,7 +40,12 @@
 #define CONFY_BAD_KEY_HPP
 
 #include <exception>
-#include <filesystem>
+#ifndef CPORTA
+#  include <filesystem>
+#else
+#  include <experimental/filesystem>
+#  define filesystem experimental::filesystem
+#endif
 #include <string>
 
 /**
@@ -72,8 +77,13 @@ struct bad_key : std::exception {
      * \return The nicely formatted error message. Its lifetime is bound to the lifetime of the
      * exception object.
      */
-    [[nodiscard]] const char*
+    const char*
     what() const noexcept override;
+
+private:
+    std::string _buf;            ///< Buffer containing the error message
+    std::string _key;            ///< The erroneous key
+    std::filesystem::path _file; ///< The ill-formed file's path
 };
 
 #endif

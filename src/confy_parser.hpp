@@ -40,10 +40,23 @@
 #ifndef CONFY_CONFY_PARSER_HPP
 #define CONFY_CONFY_PARSER_HPP
 
-#include <filesystem>
-#include <optional>
+#ifdef CPORTA
+#  include <experimental/filesystem>
+#  define filesystem experimental::filesystem
+#else
+#  include <filesystem>
+#endif
 #include <string>
-#include <string_view>
+#ifndef CPORTA
+#  include <optional>
+#  include <string_view>
+#else
+#  include <experimental/optional>
+#  include <experimental/string_view>
+#  define string_view experimental::string_view
+#  define optional experimental::optional
+#  define nullopt experimental::nullopt
+#endif
 #include <utility>
 
 /**
@@ -78,7 +91,7 @@ struct confy_parser {
      * \param strm The stream to read from.
      * \return The next non-empty line, or `std::nullopt` if already at EOF.
      */
-    [[nodiscard]] std::optional<std::string>
+    std::optional<std::string>
     next_line(std::istream& strm) const;
 
     /**
@@ -96,8 +109,12 @@ struct confy_parser {
      * \param ln The line to parse
      * \return The key and value packed into a pair
      */
-    [[nodiscard]] std::pair<std::string, std::string>
+    std::pair<std::string, std::string>
     parse_line(std::string_view ln) const;
+
+private:
+    mutable int _ln_cnt = 1;            ///< The current line count
+    const std::filesystem::path& _file; ///< The file
 };
 
 #endif

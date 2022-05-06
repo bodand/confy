@@ -38,3 +38,7 @@
  */
 
 #include "type_id.hpp"
+
+#include "memtrace.h"
+
+std::uint_fast32_t type_id::type_cntr = 1;

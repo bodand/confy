@@ -43,7 +43,7 @@ struct cache_factory<$assoc{$c}> {
    * \\param data The stored data in the key-value store.
    * \\return The new object of type $assoc{$c}.
    */
-  [[nodiscard]] $assoc{$c}
+  $assoc{$c}
   make(const std::string& data) const;
 };
 EOF
@@ -77,7 +77,7 @@ struct cache_factory<$assoc{$c}> {
      * \\param data The string stored as the value, parsed for the data.
      * \\return The cache containing the parsed object, or `nullptr` if parsing couldn't succeed.
      */
-    [[nodiscard]] std::unique_ptr<cache>
+    std::unique_ptr<cache>
     construct(const std::string& data);
 };
 EOF

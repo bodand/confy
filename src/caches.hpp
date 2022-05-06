@@ -40,6 +40,8 @@
 #ifndef CONFY_CACHES_HPP
 #define CONFY_CACHES_HPP
 
+#include <utility>
+
 #include "visitor.hpp"
 
 /**
@@ -91,7 +93,10 @@ struct visitable_cache : cache {
      * \param vtor The visitor to let visit us
      */
     void
-    accept(visitor_base& vtor) override;
+    accept(visitor_base& vtor) override {
+        auto self = static_cast<D*>(this);
+        vtor.visit(self);
+    }
 
     /**
      * \brief Defaulted destructor.
@@ -117,7 +122,7 @@ struct schar_cache : visitable_cache<schar_cache> {
      *
      * \param data The value to store in the cache. Moved.
      */
-    schar_cache(signed char&& data) noexcept;
+    schar_cache(signed char&& data) noexcept : _data(std::move(data)) { }
 
     /**
      * \brief Cache getter
@@ -127,7 +132,10 @@ struct schar_cache : visitable_cache<schar_cache> {
      * \return The stored value.
      */
     const signed char*
-    get_value_ptr();
+    get_value_ptr() const { return &_data; }
+
+private:
+    signed char _data;
 };
 
 /**
@@ -145,7 +153,7 @@ struct uchar_cache : visitable_cache<uchar_cache> {
      *
      * \param data The value to store in the cache. Moved.
      */
-    uchar_cache(unsigned char&& data) noexcept;
+    uchar_cache(unsigned char&& data) noexcept : _data(std::move(data)) { }
 
     /**
      * \brief Cache getter
@@ -155,7 +163,10 @@ struct uchar_cache : visitable_cache<uchar_cache> {
      * \return The stored value.
      */
     const unsigned char*
-    get_value_ptr();
+    get_value_ptr() const { return &_data; }
+
+private:
+    unsigned char _data;
 };
 
 /**
@@ -173,7 +184,7 @@ struct char_cache : visitable_cache<char_cache> {
      *
      * \param data The value to store in the cache. Moved.
      */
-    char_cache(char&& data) noexcept;
+    char_cache(char&& data) noexcept : _data(std::move(data)) { }
 
     /**
      * \brief Cache getter
@@ -183,7 +194,10 @@ struct char_cache : visitable_cache<char_cache> {
      * \return The stored value.
      */
     const char*
-    get_value_ptr();
+    get_value_ptr() const { return &_data; }
+
+private:
+    char _data;
 };
 
 /**
@@ -201,7 +215,7 @@ struct int_cache : visitable_cache<int_cache> {
      *
      * \param data The value to store in the cache. Moved.
      */
-    int_cache(int&& data) noexcept;
+    int_cache(int&& data) noexcept : _data(std::move(data)) { }
 
     /**
      * \brief Cache getter
@@ -211,7 +225,10 @@ struct int_cache : visitable_cache<int_cache> {
      * \return The stored value.
      */
     const int*
-    get_value_ptr();
+    get_value_ptr() const { return &_data; }
+
+private:
+    int _data;
 };
 
 /**
@@ -229,7 +246,7 @@ struct uint_cache : visitable_cache<uint_cache> {
      *
      * \param data The value to store in the cache. Moved.
      */
-    uint_cache(unsigned&& data) noexcept;
+    uint_cache(unsigned&& data) noexcept : _data(std::move(data)) { }
 
     /**
      * \brief Cache getter
@@ -239,7 +256,10 @@ struct uint_cache : visitable_cache<uint_cache> {
      * \return The stored value.
      */
     const unsigned*
-    get_value_ptr();
+    get_value_ptr() const { return &_data; }
+
+private:
+    unsigned _data;
 };
 
 /**
@@ -257,7 +277,7 @@ struct long_cache : visitable_cache<long_cache> {
      *
      * \param data The value to store in the cache. Moved.
      */
-    long_cache(long&& data) noexcept;
+    long_cache(long&& data) noexcept : _data(std::move(data)) { }
 
     /**
      * \brief Cache getter
@@ -267,7 +287,10 @@ struct long_cache : visitable_cache<long_cache> {
      * \return The stored value.
      */
     const long*
-    get_value_ptr();
+    get_value_ptr() const { return &_data; }
+
+private:
+    long _data;
 };
 
 /**
@@ -285,7 +308,7 @@ struct ulong_cache : visitable_cache<ulong_cache> {
      *
      * \param data The value to store in the cache. Moved.
      */
-    ulong_cache(unsigned long&& data) noexcept;
+    ulong_cache(unsigned long&& data) noexcept : _data(std::move(data)) { }
 
     /**
      * \brief Cache getter
@@ -295,7 +318,10 @@ struct ulong_cache : visitable_cache<ulong_cache> {
      * \return The stored value.
      */
     const unsigned long*
-    get_value_ptr();
+    get_value_ptr() const { return &_data; }
+
+private:
+    unsigned long _data;
 };
 
 /**
@@ -313,7 +339,7 @@ struct long_long_cache : visitable_cache<long_long_cache> {
      *
      * \param data The value to store in the cache. Moved.
      */
-    long_long_cache(long long&& data) noexcept;
+    long_long_cache(long long&& data) noexcept : _data(std::move(data)) { }
 
     /**
      * \brief Cache getter
@@ -323,7 +349,10 @@ struct long_long_cache : visitable_cache<long_long_cache> {
      * \return The stored value.
      */
     const long long*
-    get_value_ptr();
+    get_value_ptr() const { return &_data; }
+
+private:
+    long long _data;
 };
 
 /**
@@ -341,7 +370,7 @@ struct ulong_long_cache : visitable_cache<ulong_long_cache> {
      *
      * \param data The value to store in the cache. Moved.
      */
-    ulong_long_cache(unsigned long long&& data) noexcept;
+    ulong_long_cache(unsigned long long&& data) noexcept : _data(std::move(data)) { }
 
     /**
      * \brief Cache getter
@@ -351,7 +380,10 @@ struct ulong_long_cache : visitable_cache<ulong_long_cache> {
      * \return The stored value.
      */
     const unsigned long long*
-    get_value_ptr();
+    get_value_ptr() const { return &_data; }
+
+private:
+    unsigned long long _data;
 };
 
 /**
@@ -369,7 +401,7 @@ struct short_cache : visitable_cache<short_cache> {
      *
      * \param data The value to store in the cache. Moved.
      */
-    short_cache(short&& data) noexcept;
+    short_cache(short&& data) noexcept : _data(std::move(data)) { }
 
     /**
      * \brief Cache getter
@@ -379,7 +411,10 @@ struct short_cache : visitable_cache<short_cache> {
      * \return The stored value.
      */
     const short*
-    get_value_ptr();
+    get_value_ptr() const { return &_data; }
+
+private:
+    short _data;
 };
 
 /**
@@ -397,7 +432,7 @@ struct ushort_cache : visitable_cache<ushort_cache> {
      *
      * \param data The value to store in the cache. Moved.
      */
-    ushort_cache(unsigned short&& data) noexcept;
+    ushort_cache(unsigned short&& data) noexcept : _data(std::move(data)) { }
 
     /**
      * \brief Cache getter
@@ -407,7 +442,10 @@ struct ushort_cache : visitable_cache<ushort_cache> {
      * \return The stored value.
      */
     const unsigned short*
-    get_value_ptr();
+    get_value_ptr() const { return &_data; }
+
+private:
+    unsigned short _data;
 };
 
 /**
@@ -425,7 +463,7 @@ struct bool_cache : visitable_cache<bool_cache> {
      *
      * \param data The value to store in the cache. Moved.
      */
-    bool_cache(bool&& data) noexcept;
+    bool_cache(bool&& data) noexcept : _data(std::move(data)) { }
 
     /**
      * \brief Cache getter
@@ -435,7 +473,10 @@ struct bool_cache : visitable_cache<bool_cache> {
      * \return The stored value.
      */
     const bool*
-    get_value_ptr();
+    get_value_ptr() const { return &_data; }
+
+private:
+    bool _data;
 };
 
 /**
@@ -453,7 +494,7 @@ struct float_cache : visitable_cache<float_cache> {
      *
      * \param data The value to store in the cache. Moved.
      */
-    float_cache(float&& data) noexcept;
+    float_cache(float&& data) noexcept : _data(std::move(data)) { }
 
     /**
      * \brief Cache getter
@@ -463,7 +504,10 @@ struct float_cache : visitable_cache<float_cache> {
      * \return The stored value.
      */
     const float*
-    get_value_ptr();
+    get_value_ptr() const { return &_data; }
+
+private:
+    float _data;
 };
 
 /**
@@ -481,7 +525,7 @@ struct double_cache : visitable_cache<double_cache> {
      *
      * \param data The value to store in the cache. Moved.
      */
-    double_cache(double&& data) noexcept;
+    double_cache(double&& data) noexcept : _data(std::move(data)) { }
 
     /**
      * \brief Cache getter
@@ -491,7 +535,10 @@ struct double_cache : visitable_cache<double_cache> {
      * \return The stored value.
      */
     const double*
-    get_value_ptr();
+    get_value_ptr() const { return &_data; }
+
+private:
+    double _data;
 };
 
 /**
@@ -509,7 +556,7 @@ struct long_double_cache : visitable_cache<long_double_cache> {
      *
      * \param data The value to store in the cache. Moved.
      */
-    long_double_cache(long double&& data) noexcept;
+    long_double_cache(long double&& data) noexcept : _data(std::move(data)) { }
 
     /**
      * \brief Cache getter
@@ -519,7 +566,10 @@ struct long_double_cache : visitable_cache<long_double_cache> {
      * \return The stored value.
      */
     const long double*
-    get_value_ptr();
+    get_value_ptr() const { return &_data; }
+
+private:
+    long double _data;
 };
 
 

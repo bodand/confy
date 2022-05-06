@@ -39,3 +39,5 @@
  */
 
 #include "cache_factory.hpp"
+
+#include "memtrace.h"

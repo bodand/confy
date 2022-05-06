@@ -1,6 +1,6 @@
 project=confy
 version=1
 author="Bodor Andras"
-licence='BSD 3-Clause'
+license='BSD 3-Clause'
 key=nothing
 key2=tests

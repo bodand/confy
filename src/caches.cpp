@@ -27,8 +27,12 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
- * src/caches.cpp --
- *   Implements caches's functionality.
  */
+
+/** \file caches.cpp
+ *  \brief Compilation check for caches.hpp.
+ */
+
 #include "caches.hpp"
+
+#include "memtrace.h"

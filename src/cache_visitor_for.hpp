@@ -35,6 +35,10 @@
 #include "cachable.hpp"
 #include "visitor.hpp"
 
+#ifdef CPORTA
+#  define cachable class
+#endif
+
 /**
  * \brief Concrete cache visitor
  *
@@ -52,7 +56,7 @@
  * \tparam T The type whose cache is to be visited.
  */
 template<cachable T>
-struct cache_visitor_for final : visitor<T> {
+struct cache_visitor_for final : visitor<typename cache_factory<T>::cache_type> {
     /**
      * \brief The visited cache type
      *
@@ -70,7 +74,9 @@ struct cache_visitor_for final : visitor<T> {
      * \param visited The visited cache object.
      */
     void
-    do_visit(T& visited) final;
+    do_visit(cache_type& visited) final {
+        _data = visited.get_value_ptr();
+    }
 
     /**
      * \brief Check whether the last visitation succeeded
@@ -81,7 +87,7 @@ struct cache_visitor_for final : visitor<T> {
      * \return The success of the last visitation operation
      */
     bool
-    valid() const noexcept;
+    valid() const noexcept { return _data != nullptr; }
     /**
      * \brief Returns the last visitations value.
      *
@@ -93,7 +99,10 @@ struct cache_visitor_for final : visitor<T> {
      * \return A const reference to the cache's value.
      */
     const T&
-    value() const noexcept;
+    value() const noexcept { return *_data; }
+
+private:
+    const T* _data = nullptr; ///< The pointer to the stored data
 };
 
 #endif

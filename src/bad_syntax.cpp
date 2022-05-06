@@ -30,3 +30,25 @@
  */
 
 #include "bad_syntax.hpp"
+
+#include "memtrace.h"
+
+bad_syntax::bad_syntax(std::string line, int ln, int col, std::filesystem::path file) noexcept
+     : _buf(),
+       _line(std::move(line)),
+       _ln(ln),
+       _col(col),
+       _file(std::move(file)) {
+    std::ostringstream ss;
+    ss << (_file.empty() ? "<unknown file>" : _file) << ":"
+       << _ln << ":" << _col << ": syntax error: ";
+    auto offset = ss.str().size();
+    ss << _line << "\n";
+    ss << std::string(offset + _col + 1, ' ') << "^--HERE\n";
+    _buf = ss.str();
+}
+
+const char*
+bad_syntax::what() const noexcept {
+    return _buf.c_str();
+}

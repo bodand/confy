@@ -175,6 +175,7 @@ protected:
         return true;
     }
 
+#ifndef CPORTA
     /**
      * \brief Implemented typeless visitor internal.
      *
@@ -191,6 +192,43 @@ protected:
     visit_typeless(void* erased_visited, type_id tid) final {
         (try_visit<Ts>(erased_visited, tid) || ...);
     }
+#else
+private:
+    /* JPorta pseudo C++17 workaround */
+
+    template<class... Us>
+    struct try_visit_helper {
+        void
+        operator()(visitor&, void*, const type_id&) { }
+    };
+
+    template<class T, class... Rem>
+    struct try_visit_helper<T, Rem...> {
+        void
+        operator()(visitor& self, void* typeless_visited, const type_id& tid) {
+            if (self.try_visit<T>(typeless_visited, tid)) return;
+            return try_visit_helper<Rem...>()(self, typeless_visited, tid);
+        }
+    };
+
+protected:
+    /**
+     * \brief Implemented typeless visitor internal.
+     *
+     * This class is the one in the hierarchy that implements the type erased visitor internal
+     * function.
+     * Iteratively checks with each type it is supposed to be able to handle and if it finds a
+     * matching T in Ts that has the same `type_id` as provided, it casts the type erased value
+     * to that pointer, then calls the `do_visit` function with the proper parameters.
+     *
+     * \param erased_visited The type erased object to visit.
+     * \param tid The type_id value of the object's actual type.
+     */
+    void
+    visit_typeless(void* erased_visited, type_id tid) final {
+        try_visit_helper<Ts...>()(*this, erased_visited, tid);
+    }
+#endif
 };
 
 #endif

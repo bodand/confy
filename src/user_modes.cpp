@@ -35,3 +35,40 @@
  */
 
 #include "user_modes.hpp"
+
+#include <iostream>
+
+#include "config_set.hpp"
+#include "confy_parser.hpp"
+
+int
+interactive_mode(const std::filesystem::path& cfg_file) {
+    config_set<confy_parser> conf(cfg_file);
+
+    for (;;) {
+        try {
+            std::string key;
+            if (!std::getline(std::cin, key)) return 0;
+
+            std::cout << conf.get<std::string_view>(key) << "\n";
+        } catch (const std::invalid_argument& ex) {
+            /* NOP, invalid keys are ignored here */
+        }
+    }
+}
+
+
+int
+cli_mode(const std::filesystem::path& cfg_file, cli_keys_t keys) {
+    config_set<confy_parser> conf(cfg_file);
+
+    try {
+        for (const auto& key : keys) {
+            std::cout << conf.get<std::string_view>(key) << "\n";
+        }
+        return 0;
+    } catch (const std::out_of_range& ex) {
+        std::cerr << ex.what();
+    }
+    return 2;
+}

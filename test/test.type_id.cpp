@@ -34,17 +34,12 @@
  * \brief Test functions for the type_id classes
  */
 
-#include <exception>
-#include <filesystem>
-#include <string>
 #include <type_traits>
 
+#include "gtest_lite.h"
 #include "type_id.hpp"
 
-using namespace std::literals;
-
-#include "gtest_lite.h"
-
+#ifndef CPORTA
 namespace {
     template<class T>
     concept const_equality_comparable = requires(const T t) {
@@ -57,6 +52,7 @@ namespace {
                                               { std::declval<T>() != t } -> std::same_as<bool>;
                                           };
 }
+#endif
 
 void
 test_type_id() {
@@ -71,8 +67,10 @@ test_type_id() {
 
     // static checks
     TEST(type_id, static_checks) {
+#ifndef CPORTA
         EXPECT_TRUE(const_equality_comparable<type_id>);
         EXPECT_TRUE(const_inequality_comparable<type_id>);
+#endif
         EXPECT_TRUE(noexcept(std::declval<type_id>() == std::declval<type_id>()));
         EXPECT_TRUE(noexcept(std::declval<type_id>() != std::declval<type_id>()));
     }

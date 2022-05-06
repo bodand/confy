@@ -41,26 +41,43 @@
 #ifndef CONFY_CAPTURE_STDIO_HPP
 #define CONFY_CAPTURE_STDIO_HPP
 
+#include <ios>
 #include <sstream>
 #include <streambuf>
-#include <string_view>
+#ifndef CPORTA
+#  include <string_view>
+#else
+#  include <experimental/string_view>
+#  define string_view experimental::string_view
+#endif
 
 namespace {
-    template<auto Strm>
+    template<class Strm>
     struct stream_resetter {
         void
         operator()(std::streambuf* buf) const {
-            Strm->rdbuf(buf);
+            Strm::value->rdbuf(buf);
         }
     };
-    template<auto Strm>
+
+    template<std::istream* IStrm>
+    struct istream_v {
+        static constexpr auto value = IStrm;
+    };
+
+    template<std::ostream* OStrm>
+    struct ostream_v {
+        static constexpr auto value = OStrm;
+    };
+
+    template<class Strm>
     using reset_stream = std::unique_ptr<std::streambuf, stream_resetter<Strm>>;
 }
 
 /**
  * \brief A function to feed input to an std::istream.
  *
- * A function that can be used to simulate as if the provided IStrm std::istream object was written
+ * A function that can be used to simulate as if the provided OStrm std::istream object was written
  * to.
  * It swaps the stream buffer under the stream allowing it to give it arbitrary data, as if it was
  * given to it from an outside source, e.g. STDIN.
@@ -81,7 +98,7 @@ void
 feed_stream(std::string_view data, Fn&& fn, Args&&... args) {
     std::istringstream ss({data.data(), data.size()});
     { // REDIRECTION SCOPE
-        auto buf_buf = reset_stream<IStrm>(IStrm->rdbuf(ss.rdbuf()));
+        auto buf_buf = reset_stream<istream_v<IStrm>>(IStrm->rdbuf(ss.rdbuf()));
         std::forward<Fn>(fn)(std::forward<Args>(args)...);
     }
 }
@@ -111,7 +128,7 @@ std::string
 capture_stream(Fn&& fn, Args&&... args) {
     std::ostringstream ss;
     { // REDIRECTION SCOPE
-        auto buf_buf = reset_stream<OStrm>(OStrm->rdbuf(ss.rdbuf()));
+        auto buf_buf = reset_stream<ostream_v<OStrm>>(OStrm->rdbuf(ss.rdbuf()));
         std::forward<Fn>(fn)(std::forward<Args>(args)...);
     }
     return ss.str();

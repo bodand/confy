@@ -41,14 +41,16 @@
 #ifndef CONFY_CACHABLE_HPP
 #define CONFY_CACHABLE_HPP
 
-#include <concepts>
+#ifndef CPORTA
+#  include <concepts>
+#endif
 #include <memory>
 #include <string>
 #include <type_traits>
 
-template<class T>
-struct cache_factory;
-struct cache;
+#include "cache_factory.hpp"
+
+#ifndef CPORTA
 
 /**
  * \brief The cachable concept
@@ -63,5 +65,47 @@ concept cachable =
            typename cache_factory<T>::cache_type;
            { c.construct(std::declval<const std::string&>()) } -> std::same_as<std::unique_ptr<cache>>;
        };
+
+#else
+
+// hacky non-C++20 implementation, officially this doesn't exist. Workaround JPorta
+// only checks for the construct member fn. to exist
+
+/**
+ * \brief JPorta workaround cachable
+ *
+ * This is a workaround JPorta only being able to compile code in C++17 mode.
+ * Implemements checking for the construct member function on the given T type.
+ * Uses the classic SFINAE detection idiom.
+ *
+ * \tparam T The type to check.
+ */
+template<class T>
+class jporta_cachable {
+    using True = char;
+    using False = char[2];
+
+    template<class C>
+    static auto
+           test_impl(std::nullptr_t) -> decltype(std::declval<C>().construct(std::declval<const std::string&>()), True{});
+    template<class>
+    static False&
+    test_impl(...)  ;
+
+public:
+    constexpr static bool value = sizeof(typename std::decay<decltype(test_impl<T>(nullptr))>::type) == sizeof(True);
+};
+
+/**
+ * \brief JPorta workaround cachable helper
+ *
+ * Helper variable template for the workaround implementation.
+ *
+ * \tparam T The type to check.
+ */
+template<class T>
+constexpr static bool cachable = jporta_cachable<cache_factory<T>>::value;
+
+#endif
 
 #endif

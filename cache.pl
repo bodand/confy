@@ -2,63 +2,63 @@ use v5.26;
 use warnings;
 
 my %assoc = (
-    char => 'char',
-    uchar => 'unsigned char',
-    schar => 'signed char',
-    short => 'short',
-    ushort => 'unsigned short',
-    int => 'int',
-    uint => 'unsigned',
-    long => 'long',
-    ulong => 'unsigned long',
-    long_long => 'long long',
-    ulong_long => 'unsigned long long',
-    float => 'float',
-    double => 'double',
+    char        => 'char',
+    uchar       => 'unsigned char',
+    schar       => 'signed char',
+    short       => 'short',
+    ushort      => 'unsigned short',
+    int         => 'int',
+    uint        => 'unsigned',
+    long        => 'long',
+    ulong       => 'unsigned long',
+    long_long   => 'long long',
+    ulong_long  => 'unsigned long long',
+    float       => 'float',
+    double      => 'double',
     long_double => 'long double',
-    bool => 'bool',
+    bool        => 'bool',
 );
 
 my %name = (
-    char => 'Character',
-    uchar => 'Unsigned character',
-    schar => 'Signed character',
-    short => 'Short integer',
-    ushort => 'Unsigned short integer',
-    int => 'Integer',
-    uint => 'Unsigned integer',
-    long => 'Long integer',
-    ulong => 'Unsigned long integer',
-    long_long => 'Long long integer',
-    ulong_long => 'Unsigned long long integer',
-    float => 'Floating point',
-    double => 'Double precision floating point',
+    char        => 'Character',
+    uchar       => 'Unsigned character',
+    schar       => 'Signed character',
+    short       => 'Short integer',
+    ushort      => 'Unsigned short integer',
+    int         => 'Integer',
+    uint        => 'Unsigned integer',
+    long        => 'Long integer',
+    ulong       => 'Unsigned long integer',
+    long_long   => 'Long long integer',
+    ulong_long  => 'Unsigned long long integer',
+    float       => 'Floating point',
+    double      => 'Double precision floating point',
     long_double => 'Long double precision floating point',
-    bool => 'Boolean logical value',
+    bool        => 'Boolean logical value',
 );
 
 my %tr = (
-    char => ' char',
-    uchar => 'n unsigned char',
-    schar => ' signed char',
-    short => ' short',
-    ushort => 'n unsigned short',
-    int => 'n int',
-    uint => 'n unsigned',
-    long => ' long',
-    ulong => 'n unsigned long',
-    long_long => ' long long',
-    ulong_long => 'n unsigned long long',
-    float => ' float',
-    double => ' double',
+    char        => ' char',
+    uchar       => 'n unsigned char',
+    schar       => ' signed char',
+    short       => ' short',
+    ushort      => 'n unsigned short',
+    int         => 'n int',
+    uint        => 'n unsigned',
+    long        => ' long',
+    ulong       => 'n unsigned long',
+    long_long   => ' long long',
+    ulong_long  => 'n unsigned long long',
+    float       => ' float',
+    double      => ' double',
     long_double => ' long double',
-    bool => ' bool',
+    bool        => ' bool',
 );
 
 for my $c (qw/schar uchar char int uint long ulong long_long ulong_long short ushort bool float double long_double/) {
-    my $cc = "${c}_cache";
-    my $oc = $cc . '(';
-    say <<"EOF";
+  my $cc = "${c}_cache";
+  my $oc = $cc . '(';
+  say <<"EOF";
 /**
  *  \\brief $name{$c} cache
  *
@@ -74,7 +74,7 @@ struct $cc : visitable_cache<$cc> {
      *
      * \\param data The value to store in the cache. Moved.
      */
-    $oc$assoc{$c}&& data) noexcept;
+    $oc$assoc{$c}&& data) noexcept : _data(std::move(data)) { }
 
     /**
      * \\brief Cache getter
@@ -83,7 +83,10 @@ struct $cc : visitable_cache<$cc> {
      *
      * \\return The stored value.
      */
-    const $assoc{$c}* get_value_ptr();
+    const $assoc{$c}*
+    get_value_ptr() const { return &_data; }
+private:
+    $assoc{$c} _data;
 };
 EOF
 }

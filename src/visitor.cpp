@@ -40,3 +40,5 @@
  */
 
 #include "visitor.hpp"
+
+#include "memtrace.h"

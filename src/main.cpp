@@ -44,7 +44,12 @@
 
 #include <exception>
 #include <iostream>
-#include <string_view>
+#ifndef CPORTA
+#  include <string_view>
+#else
+#  include <experimental/string_view>
+#  define string_view experimental::string_view
+#endif
 #include <vector>
 
 #include "user_modes.hpp"

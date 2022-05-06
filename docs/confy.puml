@@ -69,7 +69,7 @@ class "cache_visitor_for<cachable T>" as cache_visitor_for << (T,#ff8800) >> {
  - _cache_ptr: const T*
 }
 
-visitor <|-- cache_visitor_for : <<final>> Ts... = {T}
+visitor <|-- cache_visitor_for : <<final>> Ts... = {cache_factory<T>::cache_type}
 cache_visitor_for <-- config
 cache_visitor_for #-- cachable_concept : megköveteli T-re
 

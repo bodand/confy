@@ -35,7 +35,12 @@
  */
 
 #include <string>
-#include <string_view>
+#ifndef CPORTA
+#  include <string_view>
+#else
+#  include <experimental/string_view>
+#  define string_view experimental::string_view
+#endif
 #include <type_traits>
 
 #include "cache_factory.hpp"
@@ -47,19 +52,6 @@ using namespace std::literals;
 #include "gtest_lite.h"
 
 namespace {
-    template<class T>
-    concept has_make = requires(T t) {
-                           { t.make(std::string("")) };
-                       };
-    template<class T>
-    concept const_makeable = requires(const T t) {
-                                 { t.make(std::declval<const std::string&>()) };
-                             };
-    template<class T, class U>
-    concept makeable_rettype = requires(const T t) {
-                                   { t.make(std::declval<const std::string&>()) } -> std::same_as<U>;
-                               };
-
     constexpr const char* const invalid_input = "#";
     template<class>
     constexpr const char* const valid_input = "42";
@@ -83,23 +75,23 @@ namespace {
     template<>
     constexpr const auto valid_value<bool> = true;
 
-    template<class T, int I>
+    template<class T, class I>
     struct do_test {
-        explicit do_test(tlist<T, int_t<I>>) { }
+        explicit do_test(tlist<T, I>) { }
 
         void
         operator()() const {
-            gtest_lite::test.begin(("cached_cachefactory.static_checks#" + std::to_string(I)).c_str());
-            EXPECT_TRUE(std::is_default_constructible_v<cache_visitor_for<T>>);
+            gtest_lite::test.begin(("cached_cachefactory.static_checks#" + std::to_string(I::value)).c_str());
+            EXPECT_TRUE(std::is_default_constructible<cache_visitor_for<T>>::value);
             gtest_lite::test.end();
 
-            gtest_lite::test.begin(("cached_cachefactory.construct#" + std::to_string(I)).c_str());
+            gtest_lite::test.begin(("cached_cachefactory.construct#" + std::to_string(I::value)).c_str());
             cache_factory<T> sut;
             EXPECT_TRUE(sut.construct(invalid_input) == nullptr); // expect_eq requires copyable types
             EXPECT_TRUE(sut.construct(valid_input<T>) != nullptr);
             gtest_lite::test.end();
 
-            gtest_lite::test.begin(("cache_vtor_for.T_validity#" + std::to_string(I)).c_str());
+            gtest_lite::test.begin(("cache_vtor_for.T_validity#" + std::to_string(I::value)).c_str());
             cache_visitor_for<T> vtor;
             EXPECT_FALSE(vtor.valid());
             gtest_lite::test.end();
@@ -107,9 +99,9 @@ namespace {
             auto value = sut.construct(valid_input<T>);
             value->accept(vtor);
 
-            gtest_lite::test.begin(("cache_vtor_for.T_visitation#" + std::to_string(I)).c_str());
+            gtest_lite::test.begin(("cache_vtor_for.T_visitation#" + std::to_string(I::value)).c_str());
             EXPECT_TRUE(vtor.valid());
-            if constexpr (std::is_integral_v<T>) {
+            if (std::is_integral<T>::value) {
                 EXPECT_EQ(vtor.value(), valid_value<T>);
             } else {
                 EXPECT_DOUBLE_EQ(vtor.value(), valid_value<T>);
@@ -117,26 +109,31 @@ namespace {
             gtest_lite::test.end();
         }
     };
+
+    template<class... Args>
+    do_test<Args...>
+    make_test(tlist<Args...> typs) {
+        return do_test<Args...>(typs);
+    }
 }
 
 void
 test_cached_cache_factory() {
-    auto tests = std::tuple{
-           do_test(tlist<char, int_t<1>>()),
-           do_test(tlist<signed char, int_t<2>>()),
-           do_test(tlist<unsigned char, int_t<3>>()),
-           do_test(tlist<int, int_t<4>>()),
-           do_test(tlist<unsigned, int_t<5>>()),
-           do_test(tlist<short, int_t<6>>()),
-           do_test(tlist<unsigned short, int_t<7>>()),
-           do_test(tlist<long, int_t<8>>()),
-           do_test(tlist<unsigned long, int_t<9>>()),
-           do_test(tlist<long long, int_t<10>>()),
-           do_test(tlist<unsigned long long, int_t<11>>()),
-           do_test(tlist<float, int_t<12>>()),
-           do_test(tlist<double, int_t<13>>()),
-           do_test(tlist<long double, int_t<14>>()),
-           do_test(tlist<bool, int_t<15>>()),
-    };
+    auto tests = std::make_tuple(
+           make_test(tlist<char, int_t<1>>()),
+           make_test(tlist<signed char, int_t<2>>()),
+           make_test(tlist<unsigned char, int_t<3>>()),
+           make_test(tlist<int, int_t<4>>()),
+           make_test(tlist<unsigned, int_t<5>>()),
+           make_test(tlist<short, int_t<6>>()),
+           make_test(tlist<unsigned short, int_t<7>>()),
+           make_test(tlist<long, int_t<8>>()),
+           make_test(tlist<unsigned long, int_t<9>>()),
+           make_test(tlist<long long, int_t<10>>()),
+           make_test(tlist<unsigned long long, int_t<11>>()),
+           make_test(tlist<float, int_t<12>>()),
+           make_test(tlist<double, int_t<13>>()),
+           make_test(tlist<long double, int_t<14>>()),
+           make_test(tlist<bool, int_t<15>>()));
     call_tuple(tests);
 }

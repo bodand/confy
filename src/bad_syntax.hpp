@@ -40,7 +40,12 @@
 #define CONFY_BAD_SYNTAX_HPP
 
 #include <exception>
-#include <filesystem>
+#ifndef CPORTA
+#  include <filesystem>
+#else
+#  include <experimental/filesystem>
+#  define filesystem experimental::filesystem
+#endif
 #include <string>
 
 /**
@@ -74,8 +79,15 @@ struct bad_syntax : std::exception {
      *
      * \return The error message in a C-string.
      */
-    [[nodiscard]] const char*
+    const char*
     what() const noexcept override;
+
+private:
+    std::string _buf;            ///< Buffer containing the formatted error message
+    std::string _line;           ///< The erroneous line
+    int _ln;                     ///< The offset of the line in the ill-formed file
+    int _col;                    ///< The offset of the character failing parsing
+    std::filesystem::path _file; ///< The ill-formed file's path
 };
 
 #endif

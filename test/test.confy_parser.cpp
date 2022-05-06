@@ -34,15 +34,9 @@
  * \brief Test functions for the confy_parser class
  */
 
-#include <exception>
-#include <filesystem>
-#include <iterator>
-#include <optional>
-#include <ranges>
 #include <sstream>
 #include <string>
 #include <tuple>
-#include <type_traits>
 
 #include "confy_parser.hpp"
 
@@ -76,27 +70,29 @@ test_confy_parser() {
     END
 
     TEST(confy_parser, exceptions) {
-        std::string file("test-file");
-        for (auto&& [ln, errpos] : {
-                    std::pair{""s, ":1:1"s},
-                    {"#comment"s, ":1:1"s},
-                    {" line=bad"s, ":1:1"s},
-                    {"1=bad"s, ":1:1"s},
-                    {"a,b=1"s, ":1:2"s},
-                    {"a=,1"s, ":1:3"s},
-                    {"a='b"s, ":1:5"s},
-                    {"a=\"b"s, ":1:5"}}) {
+        std::filesystem::path file("test-file");
+        for (auto&& set : {
+                    std::make_pair(""s, ":1:1"s),
+                    std::make_pair("#comment"s, ":1:1"s),
+                    std::make_pair(" line=bad"s, ":1:1"s),
+                    std::make_pair("1=bad"s, ":1:1"s),
+                    std::make_pair("a,b=1"s, ":1:2"s),
+                    std::make_pair("a=,1"s, ":1:3"s),
+                    std::make_pair("a='b"s, ":1:5"s),
+                    std::make_pair("a=\"b"s, ":1:5"s)}) {
+            auto&& ln = set.first;
+            auto&& ln_col = set.second;
+            confy_parser cf(file);
             try {
-                confy_parser cf(file);
                 EXPECT_THROW_THROW(std::ignore = cf.parse_line(ln), const bad_syntax&);
             } catch (const bad_syntax& ex) {
-                EXPECT_NE(ex.what(), nullptr);
+                EXPECT_TRUE(ex.what() != nullptr);
 
                 std::string str(ex.what());
-                auto file_off = std::search(str.begin(), str.end(), file.begin(), file.end());
+                auto filename = file.string();
+                auto file_off = std::search(str.begin(), str.end(), filename.begin(), filename.end());
                 EXPECT_FALSE(file_off == str.end());
 
-                auto ln_col = ":1:1"s;
                 auto ln_col_off = std::search(str.begin(), str.end(), ln_col.begin(), ln_col.end());
                 EXPECT_FALSE(ln_col_off == str.end());
             }
@@ -112,9 +108,9 @@ test_confy_parser() {
              }) {
             confy_parser cf("file");
 
-            auto [key, value] = cf.parse_line(ln);
-            EXPECT_EQ("key", key);
-            EXPECT_EQ("value", value);
+            auto parsed = cf.parse_line(ln);
+            EXPECT_TRUE("key" == parsed.first);
+            EXPECT_TRUE("value" == parsed.second);
         }
     }
     END

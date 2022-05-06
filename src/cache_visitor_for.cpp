@@ -39,3 +39,5 @@
  */
 
 #include "cache_visitor_for.hpp"
+
+#include "memtrace.h"

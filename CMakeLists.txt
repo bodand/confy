@@ -11,12 +11,35 @@ add_executable(confy src/type_id.hpp src/type_id.cpp src/visitor.hpp src/visitor
                test/test.bad_syntax.cpp test/test_main.cpp test/test.visitor.cpp test/test.type_id.cpp test/test.cache.cpp test/call_tuple.hpp test/test.uncached.cachefactory.cpp
                test/test.cached.cachefactory.cpp
                src/parser.hpp src/confy_parser.cpp src/confy_parser.hpp test/test.confy_parser.cpp src/config.cpp src/config.hpp src/config_set.cpp src/config_set.hpp src/user_modes.cpp src/user_modes.hpp src/main.cpp test/test.user_modes.cpp test/test.config_set.cpp)
-target_compile_definitions(confy PRIVATE -DMEMTRACE)
-target_compile_features(confy PRIVATE cxx_std_20)
+target_compile_definitions(confy PRIVATE -DCPORTA)
+target_compile_features(confy PRIVATE cxx_std_17)
 target_include_directories(confy PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_compile_options(confy PRIVATE
-                       $<$<CXX_COMPILER_ID:GCC,Clang>:-Wall -Wextra -Wpedantic>
+                       $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra -Wpedantic>
                        $<$<CXX_COMPILER_ID:MSVC>:/W4 /permissive->)
+target_link_libraries(confy PRIVATE $<$<CXX_COMPILER_ID:GNU,Clang>:stdc++fs>)
+
+set(confy_inputs
+    test/inputs/bare_words.confy
+    test/inputs/broken1.confy
+    test/inputs/broken2.confy
+    test/inputs/broken3.confy
+    test/inputs/broken4.confy
+    test/inputs/broken5.confy
+    test/inputs/broken6.confy
+    test/inputs/double-strings.confy
+    test/inputs/empty1.confy
+    test/inputs/empty2.confy
+    test/inputs/empty3.confy
+    test/inputs/ints.confy
+    test/inputs/key_clash.confy
+    test/inputs/mixed.confy
+    test/inputs/single-strings.confy
+    test/inputs/xcolors.confy
+    )
+add_custom_command(TARGET confy POST_BUILD
+                   COMMAND "${CMAKE_COMMAND}" -E copy ${confy_inputs} "${CMAKE_CURRENT_BINARY_DIR}"
+                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 
 ## DOCUMENTATION ##
 
@@ -121,7 +144,7 @@ foreach (src IN LISTS CONFY_ALL_SRCS)
 endforeach ()
 
 add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/confy-src.zip"
-                   COMMAND "${CMAKE_COMMAND}" -E tar cf "${CMAKE_CURRENT_BINARY_DIR}/confy-src.zip" --format=zip "${PACK_DOC_FILE}" ${CONFY_OUT_SRCS}
+                   COMMAND "${CMAKE_COMMAND}" -E tar cf "${CMAKE_CURRENT_BINARY_DIR}/confy-src.zip" --format=zip  ${CONFY_OUT_SRCS}
                    DEPENDS ${CONFY_OUT_DEPS} ${PACK_DOC_DEP}
                    WORKING_DIRECTORY "${STAGING}")
 

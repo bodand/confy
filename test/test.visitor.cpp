@@ -35,8 +35,12 @@
  */
 
 #include <exception>
-#include <filesystem>
-#include <string>
+#ifdef CPORTA
+#  include <experimental/filesystem>
+#  define filesystem experimental::filesystem
+#else
+#  include <filesystem>
+#endif
 #include <type_traits>
 
 #include "visitor.hpp"
@@ -92,7 +96,7 @@ namespace {
 void
 test_visitors() {
     TEST(visitor, static_check) {
-        EXPECT_TRUE((std::is_default_constructible_v<test_visitor>) );
+        EXPECT_TRUE((std::is_default_constructible<test_visitor>::value));
     }
     END
 

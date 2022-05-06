@@ -35,8 +35,12 @@
  */
 
 #include <string>
-#include <string_view>
-#include <type_traits>
+#ifndef CPORTA
+#  include <string_view>
+#else
+#  include <experimental/string_view>
+#  define string_view experimental::string_view
+#endif
 
 #include "cache_factory.hpp"
 
@@ -46,6 +50,7 @@ using namespace std::literals;
 #include "gtest_lite.h"
 
 namespace {
+#ifndef CPORTA
     template<class T>
     concept has_make = requires(T t) {
                            { t.make(std::string("")) };
@@ -58,34 +63,41 @@ namespace {
     concept makeable_rettype = requires(const T t) {
                                    { t.make(std::declval<const std::string&>()) } -> std::same_as<U>;
                                };
-
-    template<class T, int I>
+#endif
+    template<class T, class I>
     struct do_test {
-        explicit do_test(tlist<T, int_t<I>>) { }
+        explicit do_test(tlist<T, I>) { }
 
         void
         operator()() const {
-            gtest_lite::test.begin(("uncached_cachefactory.static_checks#" + std::to_string(I)).c_str());
+#ifndef CPORTA
+            gtest_lite::test.begin(("uncached_cachefactory.static_checks#" + std::to_string(I::value)).c_str());
             EXPECT_TRUE(has_make<cache_factory<T>>);
             EXPECT_TRUE(const_makeable<cache_factory<T>>);
             EXPECT_TRUE((makeable_rettype<cache_factory<T>, T>) );
             gtest_lite::test.end();
+#endif
 
-            gtest_lite::test.begin(("uncached_cachefactory.make#" + std::to_string(I)).c_str());
+            gtest_lite::test.begin(("uncached_cachefactory.make#" + std::to_string(I::value)).c_str());
             cache_factory<T> sut;
             std::string data = "<data>";
-            EXPECT_EQ(sut.make(data), data);
+            EXPECT_TRUE(sut.make(data) == data);
             gtest_lite::test.end();
         }
     };
+
+    template<class... Args>
+    do_test<Args...>
+    make_test(tlist<Args...> typs) {
+        return do_test<Args...>(typs);
+    }
 }
 
 void
 test_uncached_cache_factory() {
-    auto tests = std::tuple{
-           do_test(tlist<std::string, int_t<1>>()),
-           do_test(tlist<std::string_view, int_t<2>>()),
-           do_test(tlist<const char*, int_t<3>>()),
-    };
+    auto tests = std::make_tuple(
+           make_test(tlist<std::string, int_t<1>>()),
+           make_test(tlist<std::string_view, int_t<2>>()),
+           make_test(tlist<const char*, int_t<3>>()));
     call_tuple(tests);
 }

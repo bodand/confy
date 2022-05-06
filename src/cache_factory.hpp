@@ -39,9 +39,15 @@
 #ifndef CONFY_CACHE_FACTORY_HPP
 #define CONFY_CACHE_FACTORY_HPP
 
+#include <limits>
 #include <memory>
 #include <string>
-#include <string_view>
+#ifndef CPORTA
+#  include <string_view>
+#else
+#  include <experimental/string_view>
+#  define string_view experimental::string_view
+#endif
 
 #include "caches.hpp"
 
@@ -84,8 +90,8 @@ struct cache_factory<std::string> {
    * \param data The stored data in the key-value store.
    * \return The new object of type std::string.
    */
-    [[nodiscard]] std::string
-    make(const std::string& data) const;
+    std::string
+    make(const std::string& data) const { return data; }
 };
 
 /**
@@ -107,8 +113,8 @@ struct cache_factory<std::string_view> {
    * \param data The stored data in the key-value store.
    * \return The new object of type std::string_view.
    */
-    [[nodiscard]] std::string_view
-    make(const std::string& data) const;
+    std::string_view
+    make(const std::string& data) const { return data; }
 };
 
 /**
@@ -130,8 +136,8 @@ struct cache_factory<const char*> {
    * \param data The stored data in the key-value store.
    * \return The new object of type const char*.
    */
-    [[nodiscard]] const char*
-    make(const std::string& data) const;
+    const char*
+    make(const std::string& data) const { return data.c_str(); }
 };
 
 /**
@@ -159,8 +165,23 @@ struct cache_factory<signed char> {
      * \param data The string stored as the value, parsed for the data.
      * \return The cache containing the parsed object, or `nullptr` if parsing couldn't succeed.
      */
-    [[nodiscard]] std::unique_ptr<cache>
-    construct(const std::string& data);
+    std::unique_ptr<cache>
+    construct(const std::string& data) {
+        char* end;
+        auto act_value = std::strtol(data.c_str(), &end, 10);
+        if (end == data.c_str()) { // couldn't parse anything
+            return nullptr;
+        }
+        signed char used_value;
+        if (act_value > std::numeric_limits<signed char>::max()) {
+            used_value = std::numeric_limits<signed char>::max();
+        } else if (act_value < std::numeric_limits<signed char>::min()) {
+            used_value = std::numeric_limits<signed char>::min();
+        } else {
+            used_value = static_cast<signed char>(act_value);
+        }
+        return std::make_unique<cache_type>(std::move(used_value));
+    }
 };
 
 /**
@@ -188,8 +209,23 @@ struct cache_factory<unsigned char> {
      * \param data The string stored as the value, parsed for the data.
      * \return The cache containing the parsed object, or `nullptr` if parsing couldn't succeed.
      */
-    [[nodiscard]] std::unique_ptr<cache>
-    construct(const std::string& data);
+    std::unique_ptr<cache>
+    construct(const std::string& data) {
+        char* end;
+        auto act_value = std::strtoul(data.c_str(), &end, 10);
+        if (end == data.c_str()) { // couldn't parse anything
+            return nullptr;
+        }
+        unsigned char used_value;
+        if (act_value > std::numeric_limits<unsigned char>::max()) {
+            used_value = std::numeric_limits<unsigned char>::max();
+        } else if (act_value < std::numeric_limits<unsigned char>::min()) {
+            used_value = std::numeric_limits<unsigned char>::min();
+        } else {
+            used_value = static_cast<unsigned char>(act_value);
+        }
+        return std::make_unique<cache_type>(std::move(used_value));
+    }
 };
 
 /**
@@ -217,8 +253,23 @@ struct cache_factory<char> {
      * \param data The string stored as the value, parsed for the data.
      * \return The cache containing the parsed object, or `nullptr` if parsing couldn't succeed.
      */
-    [[nodiscard]] std::unique_ptr<cache>
-    construct(const std::string& data);
+    std::unique_ptr<cache>
+    construct(const std::string& data) {
+        char* end;
+        auto act_value = std::strtol(data.c_str(), &end, 10);
+        if (end == data.c_str()) { // couldn't parse anything
+            return nullptr;
+        }
+        char used_value;
+        if (act_value > std::numeric_limits<char>::max()) {
+            used_value = std::numeric_limits<char>::max();
+        } else if (act_value < std::numeric_limits<char>::min()) {
+            used_value = std::numeric_limits<char>::min();
+        } else {
+            used_value = static_cast<char>(act_value);
+        }
+        return std::make_unique<cache_type>(std::move(used_value));
+    }
 };
 
 /**
@@ -246,8 +297,23 @@ struct cache_factory<int> {
      * \param data The string stored as the value, parsed for the data.
      * \return The cache containing the parsed object, or `nullptr` if parsing couldn't succeed.
      */
-    [[nodiscard]] std::unique_ptr<cache>
-    construct(const std::string& data);
+    std::unique_ptr<cache>
+    construct(const std::string& data) {
+        char* end;
+        auto act_value = std::strtol(data.c_str(), &end, 10);
+        if (end == data.c_str()) { // couldn't parse anything
+            return nullptr;
+        }
+        int used_value;
+        if (act_value > std::numeric_limits<int>::max()) {
+            used_value = std::numeric_limits<int>::max();
+        } else if (act_value < std::numeric_limits<int>::min()) {
+            used_value = std::numeric_limits<int>::min();
+        } else {
+            used_value = static_cast<int>(act_value);
+        }
+        return std::make_unique<cache_type>(std::move(used_value));
+    }
 };
 
 /**
@@ -275,8 +341,23 @@ struct cache_factory<unsigned> {
      * \param data The string stored as the value, parsed for the data.
      * \return The cache containing the parsed object, or `nullptr` if parsing couldn't succeed.
      */
-    [[nodiscard]] std::unique_ptr<cache>
-    construct(const std::string& data);
+    std::unique_ptr<cache>
+    construct(const std::string& data) {
+        char* end;
+        auto act_value = std::strtoul(data.c_str(), &end, 10);
+        if (end == data.c_str()) { // couldn't parse anything
+            return nullptr;
+        }
+        unsigned used_value;
+        if (act_value > std::numeric_limits<unsigned>::max()) {
+            used_value = std::numeric_limits<unsigned>::max();
+        } else if (act_value < std::numeric_limits<unsigned>::min()) {
+            used_value = std::numeric_limits<unsigned>::min();
+        } else {
+            used_value = static_cast<unsigned>(act_value);
+        }
+        return std::make_unique<cache_type>(std::move(used_value));
+    }
 };
 
 /**
@@ -304,8 +385,15 @@ struct cache_factory<long> {
      * \param data The string stored as the value, parsed for the data.
      * \return The cache containing the parsed object, or `nullptr` if parsing couldn't succeed.
      */
-    [[nodiscard]] std::unique_ptr<cache>
-    construct(const std::string& data);
+    std::unique_ptr<cache>
+    construct(const std::string& data) {
+        char* end;
+        auto value = std::strtol(data.c_str(), &end, 10);
+        if (end == data.c_str()) { // couldn't parse anything
+            return nullptr;
+        }
+        return std::make_unique<cache_type>(std::move(value));
+    }
 };
 
 /**
@@ -333,8 +421,15 @@ struct cache_factory<unsigned long> {
      * \param data The string stored as the value, parsed for the data.
      * \return The cache containing the parsed object, or `nullptr` if parsing couldn't succeed.
      */
-    [[nodiscard]] std::unique_ptr<cache>
-    construct(const std::string& data);
+    std::unique_ptr<cache>
+    construct(const std::string& data) {
+        char* end;
+        auto value = std::strtoul(data.c_str(), &end, 10);
+        if (end == data.c_str()) { // couldn't parse anything
+            return nullptr;
+        }
+        return std::make_unique<cache_type>(std::move(value));
+    }
 };
 
 /**
@@ -362,8 +457,15 @@ struct cache_factory<long long> {
      * \param data The string stored as the value, parsed for the data.
      * \return The cache containing the parsed object, or `nullptr` if parsing couldn't succeed.
      */
-    [[nodiscard]] std::unique_ptr<cache>
-    construct(const std::string& data);
+    std::unique_ptr<cache>
+    construct(const std::string& data) {
+        char* end;
+        auto value = std::strtoll(data.c_str(), &end, 10);
+        if (end == data.c_str()) { // couldn't parse anything
+            return nullptr;
+        }
+        return std::make_unique<cache_type>(std::move(value));
+    }
 };
 
 /**
@@ -391,8 +493,15 @@ struct cache_factory<unsigned long long> {
      * \param data The string stored as the value, parsed for the data.
      * \return The cache containing the parsed object, or `nullptr` if parsing couldn't succeed.
      */
-    [[nodiscard]] std::unique_ptr<cache>
-    construct(const std::string& data);
+    std::unique_ptr<cache>
+    construct(const std::string& data) {
+        char* end;
+        auto value = std::strtoull(data.c_str(), &end, 10);
+        if (end == data.c_str()) { // couldn't parse anything
+            return nullptr;
+        }
+        return std::make_unique<cache_type>(std::move(value));
+    }
 };
 
 /**
@@ -420,8 +529,23 @@ struct cache_factory<short> {
      * \param data The string stored as the value, parsed for the data.
      * \return The cache containing the parsed object, or `nullptr` if parsing couldn't succeed.
      */
-    [[nodiscard]] std::unique_ptr<cache>
-    construct(const std::string& data);
+    std::unique_ptr<cache>
+    construct(const std::string& data) {
+        char* end;
+        auto act_value = std::strtol(data.c_str(), &end, 10);
+        if (end == data.c_str()) { // couldn't parse anything
+            return nullptr;
+        }
+        short used_value;
+        if (act_value > std::numeric_limits<short>::max()) {
+            used_value = std::numeric_limits<short>::max();
+        } else if (act_value < std::numeric_limits<short>::min()) {
+            used_value = std::numeric_limits<short>::min();
+        } else {
+            used_value = static_cast<short>(act_value);
+        }
+        return std::make_unique<cache_type>(std::move(used_value));
+    }
 };
 
 /**
@@ -449,8 +573,23 @@ struct cache_factory<unsigned short> {
      * \param data The string stored as the value, parsed for the data.
      * \return The cache containing the parsed object, or `nullptr` if parsing couldn't succeed.
      */
-    [[nodiscard]] std::unique_ptr<cache>
-    construct(const std::string& data);
+    std::unique_ptr<cache>
+    construct(const std::string& data) {
+        char* end;
+        auto act_value = std::strtol(data.c_str(), &end, 10);
+        if (end == data.c_str()) { // couldn't parse anything
+            return nullptr;
+        }
+        unsigned short used_value;
+        if (act_value > std::numeric_limits<unsigned short>::max()) {
+            used_value = std::numeric_limits<unsigned short>::max();
+        } else if (act_value < std::numeric_limits<unsigned short>::min()) {
+            used_value = std::numeric_limits<unsigned short>::min();
+        } else {
+            used_value = static_cast<unsigned short>(act_value);
+        }
+        return std::make_unique<cache_type>(std::move(used_value));
+    }
 };
 
 /**
@@ -478,8 +617,15 @@ struct cache_factory<bool> {
      * \param data The string stored as the value, parsed for the data.
      * \return The cache containing the parsed object, or `nullptr` if parsing couldn't succeed.
      */
-    [[nodiscard]] std::unique_ptr<cache>
-    construct(const std::string& data);
+    std::unique_ptr<cache>
+    construct(const std::string& data) {
+        char* end;
+        auto act_value = std::strtol(data.c_str(), &end, 10);
+        if (end == data.c_str()) { // couldn't parse anything
+            return nullptr;
+        }
+        return std::make_unique<cache_type>(act_value != 0);
+    }
 };
 
 /**
@@ -507,8 +653,15 @@ struct cache_factory<float> {
      * \param data The string stored as the value, parsed for the data.
      * \return The cache containing the parsed object, or `nullptr` if parsing couldn't succeed.
      */
-    [[nodiscard]] std::unique_ptr<cache>
-    construct(const std::string& data);
+    std::unique_ptr<cache>
+    construct(const std::string& data) {
+        char* end;
+        auto act_value = std::strtof(data.c_str(), &end);
+        if (end == data.c_str()) { // couldn't parse anything
+            return nullptr;
+        }
+        return std::make_unique<cache_type>(std::move(act_value));
+    }
 };
 
 /**
@@ -536,8 +689,15 @@ struct cache_factory<double> {
      * \param data The string stored as the value, parsed for the data.
      * \return The cache containing the parsed object, or `nullptr` if parsing couldn't succeed.
      */
-    [[nodiscard]] std::unique_ptr<cache>
-    construct(const std::string& data);
+    std::unique_ptr<cache>
+    construct(const std::string& data) {
+        char* end;
+        auto act_value = std::strtod(data.c_str(), &end);
+        if (end == data.c_str()) { // couldn't parse anything
+            return nullptr;
+        }
+        return std::make_unique<cache_type>(std::move(act_value));
+    }
 };
 
 /**
@@ -565,8 +725,15 @@ struct cache_factory<long double> {
      * \param data The string stored as the value, parsed for the data.
      * \return The cache containing the parsed object, or `nullptr` if parsing couldn't succeed.
      */
-    [[nodiscard]] std::unique_ptr<cache>
-    construct(const std::string& data);
+    std::unique_ptr<cache>
+    construct(const std::string& data) {
+        char* end;
+        auto act_value = std::strtold(data.c_str(), &end);
+        if (end == data.c_str()) { // couldn't parse anything
+            return nullptr;
+        }
+        return std::make_unique<cache_type>(std::move(act_value));
+    }
 };
 
 #endif

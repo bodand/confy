@@ -43,8 +43,24 @@
 #define CONFY_CONFIG_HPP
 
 #include <memory>
+#include <stdexcept>
 #include <string>
-#include <string_view>
+#ifndef CPORTA
+#  include <string_view>
+#else
+#  include <experimental/string_view>
+
+#  define string_view experimental::string_view
+#endif
+
+#include "cache_factory.hpp"
+#include "cache_visitor_for.hpp"
+#include "caches.hpp"
+
+#ifdef cachable
+#  undef cachable
+#endif
+#include "cachable.hpp"
 
 /**
  * \brief Key-value config entry
@@ -69,7 +85,7 @@ struct config {
      *
      * \return The name of the entry
      */
-    [[nodiscard]] std::string_view
+    std::string_view
     get_key() const noexcept;
 
     /**
@@ -84,8 +100,47 @@ struct config {
      * \return The parsed value
      */
     template<class T>
-    [[nodiscard]] std::conditional_t<std::is_trivially_copyable_v<T>, T, const T&>
-    get_as() const;
+    auto
+    get_as() const {
+        return get_as_impl<T, cachable<T>>::get(_value, _cache);
+    }
+
+private:
+    template<class T, bool>
+    struct get_as_impl;
+
+    template<class T>
+    struct get_as_impl<T, false> {
+        static auto
+        get(const std::string& value, std::unique_ptr<cache>&) {
+            auto cf = cache_factory<T>();
+            return cf.make(value);
+        }
+    };
+
+    template<class T>
+    struct get_as_impl<T, true> {
+        static auto
+        get(const std::string& value, std::unique_ptr<cache>& _cache) {
+            if (_cache) {
+                cache_visitor_for<T> vtor;
+                _cache->accept(vtor);
+                if (vtor.valid()) return vtor.value();
+            }
+            auto cf = cache_factory<T>();
+            _cache = cf.construct(value);
+            if (!_cache) throw std::invalid_argument("requested type couldn't be constructed");
+
+            cache_visitor_for<T> vtor;
+            _cache->accept(vtor);
+            if (!vtor.valid()) throw std::runtime_error("unknown error occurred fetching config");
+            return vtor.value();
+        }
+    };
+
+    std::string _name;                     ///< The name, or key, of the config entry stored
+    std::string _value;                    ///< The value of the config entry
+    mutable std::unique_ptr<cache> _cache; ///< The cache used to speed up conversions to types
 };
 
 #endif

@@ -78,7 +78,7 @@ struct type_id {
      * \return Whether the two type_id objects have been created for the same type.
      */
     bool
-    operator==(const type_id& other) const noexcept;
+    operator==(const type_id& other) const noexcept { return _value == other._value; }
     /**
      * \brief The inequality operator for type_id objects
      *
@@ -89,7 +89,7 @@ struct type_id {
      * \return Whether the two type_id object have been created for different types.
      */
     bool
-    operator!=(const type_id& other) const noexcept;
+    operator!=(const type_id& other) const noexcept { return _value != other._value; }
 
 private:
     /**
@@ -101,10 +101,11 @@ private:
      *
      * \param val The integer id value to assign to this object. Refers to a singular
      */
-    explicit type_id(std::uint_fast32_t val) noexcept;
+    explicit type_id(std::uint_fast32_t val) noexcept
+         : _value(val) { }
 
-    std::uint_fast32_t _value;                      ///< The value of the current type_id object
-    inline static std::uint_fast32_t type_cntr = 1; ///< The next to be assigned value
+    std::uint_fast32_t _value;           ///< The value of the current type_id object
+    static std::uint_fast32_t type_cntr; ///< The next to be assigned value
 
     /**
      * \brief Generates the next type id

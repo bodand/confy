@@ -36,7 +36,12 @@
 
 
 #include <string>
-#include <string_view>
+#ifndef CPORTA
+#  include <string_view>
+#else
+#  include <experimental/string_view>
+#  define string_view experimental::string_view
+#endif
 #include <type_traits>
 
 #include "bad_key.hpp"
@@ -75,7 +80,7 @@ test_config_set() {
             try {
                 EXPECT_THROW_THROW(confy_set cs(file), const bad_syntax&);
             } catch (const std::exception& ex) {
-                EXPECT_NE(ex.what(), nullptr);
+                EXPECT_TRUE(ex.what() != nullptr);
                 auto sterr = std::string(ex.what());
                 EXPECT_TRUE((std::search(sterr.begin(), sterr.end(), file.begin(), file.end()) != sterr.end()));
             }
@@ -97,7 +102,7 @@ test_config_set() {
                 EXPECT_THROW_THROW(confy_set cs(ifs), const bad_syntax&);
             } catch (const std::exception& ex) {
                 auto err_file = "<unknown file>"s;
-                EXPECT_NE(ex.what(), nullptr);
+                EXPECT_TRUE(ex.what() != nullptr);
                 auto sterr = std::string(ex.what());
                 EXPECT_TRUE((std::search(sterr.begin(), sterr.end(), err_file.begin(), err_file.end()) != sterr.end()));
             }
@@ -110,7 +115,7 @@ test_config_set() {
         try {
             EXPECT_THROW_THROW(confy_set cs(clash_file), const bad_key&);
         } catch (const std::exception& ex) {
-            EXPECT_NE(ex.what(), nullptr);
+            EXPECT_TRUE(ex.what() != nullptr);
             auto sterr = std::string(ex.what());
             auto broken_key = "BROKEN"s;
             auto dup_key = "duplicate key"s;
@@ -128,7 +133,7 @@ test_config_set() {
             std::ifstream ifs(clash_file);
             EXPECT_THROW_THROW(confy_set cs(ifs), const bad_key&);
         } catch (const std::exception& ex) {
-            EXPECT_NE(ex.what(), nullptr);
+            EXPECT_TRUE(ex.what() != nullptr);
             auto sterr = std::string(ex.what());
 
             auto err_file = "<unknown file>"s;
@@ -151,8 +156,8 @@ test_config_set() {
             EXPECT_NO_THROW(confy_set cs(file));
 
             confy_set cs(file);
-            EXPECT_EQ(cs.size(), std::size_t{});
-            EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::invalid_argument&);
+            EXPECT_TRUE(cs.size() == std::size_t{});
+            EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::out_of_range&);
         }
     }
     END
@@ -172,7 +177,7 @@ test_config_set() {
             std::ifstream ifs(file);
             confy_set cs(ifs);
             EXPECT_EQ(cs.size(), std::size_t{});
-            EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::invalid_argument&);
+            EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::out_of_range&);
         }
     }
     END
@@ -183,7 +188,7 @@ test_config_set() {
 
         confy_set cs(file);
         EXPECT_EQ(cs.size(), std::size_t{2});
-        EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::invalid_argument&);
+        EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::out_of_range&);
 
         EXPECT_NO_THROW(std::ignore = cs.get<std::string>("key"));
         EXPECT_EQ(cs.get<std::string>("key"), "bare");
@@ -203,7 +208,7 @@ test_config_set() {
         std::ifstream ifs(file);
         confy_set cs(ifs);
         EXPECT_EQ(cs.size(), std::size_t{2});
-        EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::invalid_argument&);
+        EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::out_of_range&);
 
         EXPECT_NO_THROW(std::ignore = cs.get<std::string>("key"));
         EXPECT_EQ(cs.get<std::string>("key"), "bare");
@@ -214,12 +219,12 @@ test_config_set() {
     END
 
     TEST(config_set, ints_file) {
-        std::filesystem::path file = "bare_words.confy"s;
+        std::filesystem::path file = "ints.confy"s;
         EXPECT_NO_THROW(confy_set cs(file));
 
         confy_set cs(file);
         EXPECT_EQ(cs.size(), std::size_t{3});
-        EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::invalid_argument&);
+        EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::out_of_range&);
 
         EXPECT_NO_THROW(std::ignore = cs.get<std::string>("key"));
         EXPECT_EQ(cs.get<std::string>("key"), "1");
@@ -242,7 +247,7 @@ test_config_set() {
         std::ifstream ifs(file);
         confy_set cs(ifs);
         EXPECT_EQ(cs.size(), std::size_t{3});
-        EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::invalid_argument&);
+        EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::out_of_range&);
 
         EXPECT_NO_THROW(std::ignore = cs.get<std::string>("key"));
         EXPECT_EQ(cs.get<std::string>("key"), "1");
@@ -261,14 +266,16 @@ test_config_set() {
 
         confy_set cs(file);
         EXPECT_EQ(cs.size(), std::size_t{4});
-        EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::invalid_argument&);
+        EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::out_of_range&);
 
-        for (auto&& [key, value] : {
-                    std::pair{"key"s, "some"s},
-                    {"key2"s, "have space"s},
-                    {"key3"s, "some ******* symbols"s},
-                    {"key4"s, "#4ll_th3_th1ng5_w3_h4v3"s},
+        for (auto&& data : {
+                    std::make_pair("key"s, "some"s),
+                    std::make_pair("key2"s, "have space"s),
+                    std::make_pair("key3"s, "some ******* symbols"s),
+                    std::make_pair("key4"s, "#4ll_th3_th1ng5_w3_h4v3"s),
              }) {
+            auto&& key = data.first;
+            auto&& value = data.second;
             EXPECT_NO_THROW(std::ignore = cs.get<std::string_view>(key));
             EXPECT_EQ(cs.get<std::string>(key), value);
         }
@@ -285,14 +292,16 @@ test_config_set() {
         std::ifstream ifs(file);
         confy_set cs(ifs);
         EXPECT_EQ(cs.size(), std::size_t{4});
-        EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::invalid_argument&);
+        EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::out_of_range&);
 
-        for (auto&& [key, value] : {
-                    std::pair{"key"s, "some"s},
-                    {"key2"s, "have space"s},
-                    {"key3"s, "some ******* symbols"s},
-                    {"key4"s, "#4ll_th3_th1ng5_w3_h4v3"s},
+        for (auto&& data : {
+                    std::make_pair("key"s, "some"s),
+                    std::make_pair("key2"s, "have space"s),
+                    std::make_pair("key3"s, "some ******* symbols"s),
+                    std::make_pair("key4"s, "#4ll_th3_th1ng5_w3_h4v3"s),
              }) {
+            auto&& key = data.first;
+            auto&& value = data.second;
             EXPECT_NO_THROW(std::ignore = cs.get<std::string_view>(key));
             EXPECT_EQ(cs.get<std::string>(key), value);
         }
@@ -305,14 +314,16 @@ test_config_set() {
 
         confy_set cs(file);
         EXPECT_EQ(cs.size(), std::size_t{4});
-        EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::invalid_argument&);
+        EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::out_of_range&);
 
-        for (auto&& [key, value] : {
-                    std::pair{"key"s, "some"s},
-                    {"key2"s, "have space"s},
-                    {"key3"s, "some ******* symbols"s},
-                    {"key4"s, "#4ll_th3_th1ng5_w3_h4v3"s},
+        for (auto&& data : {
+                    std::make_pair("key"s, "some"s),
+                    std::make_pair("key2"s, "have space"s),
+                    std::make_pair("key3"s, "some ******* symbols"s),
+                    std::make_pair("key4"s, "#4ll_th3_th1ng5_w3_h4v3"s),
              }) {
+            auto&& key = data.first;
+            auto&& value = data.second;
             EXPECT_NO_THROW(std::ignore = cs.get<std::string_view>(key));
             EXPECT_EQ(cs.get<std::string>(key), value);
         }
@@ -329,14 +340,16 @@ test_config_set() {
         std::ifstream ifs(file);
         confy_set cs(ifs);
         EXPECT_EQ(cs.size(), std::size_t{4});
-        EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::invalid_argument&);
+        EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::out_of_range&);
 
-        for (auto&& [key, value] : {
-                    std::pair{"key"s, "some"s},
-                    {"key2"s, "have space"s},
-                    {"key3"s, "some ******* symbols"s},
-                    {"key4"s, "#4ll_th3_th1ng5_w3_h4v3"s},
+        for (auto&& data : {
+                    std::make_pair("key"s, "some"s),
+                    std::make_pair("key2"s, "have space"s),
+                    std::make_pair("key3"s, "some ******* symbols"s),
+                    std::make_pair("key4"s, "#4ll_th3_th1ng5_w3_h4v3"s),
              }) {
+            auto&& key = data.first;
+            auto&& value = data.second;
             EXPECT_NO_THROW(std::ignore = cs.get<std::string_view>(key));
             EXPECT_EQ(cs.get<std::string>(key), value);
         }
@@ -348,15 +361,17 @@ test_config_set() {
         EXPECT_NO_THROW(confy_set cs(file));
 
         confy_set cs(file);
-        EXPECT_EQ(cs.size(), std::size_t{4});
-        EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::invalid_argument&);
+        EXPECT_EQ(cs.size(), std::size_t{6});
+        EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::out_of_range&);
 
-        for (auto&& [key, value] : {
-                    std::pair{"project"s, "confy"s},
-                    {"version"s, "1"s},
-                    {"author"s, "Bodor Andras"s},
-                    {"license"s, "BSD 3-Clause"s},
+        for (auto&& data : {
+                    std::make_pair("project"s, "confy"s),
+                    std::make_pair("version"s, "1"s),
+                    std::make_pair("author"s, "Bodor Andras"s),
+                    std::make_pair("license"s, "BSD 3-Clause"s),
              }) {
+            auto&& key = data.first;
+            auto&& value = data.second;
             EXPECT_NO_THROW(std::ignore = cs.get<std::string_view>(key));
             EXPECT_EQ(cs.get<std::string>(key), value);
         }
@@ -372,15 +387,17 @@ test_config_set() {
 
         std::ifstream ifs(file);
         confy_set cs(ifs);
-        EXPECT_EQ(cs.size(), std::size_t{4});
-        EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::invalid_argument&);
+        EXPECT_EQ(cs.size(), std::size_t{6});
+        EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::out_of_range&);
 
-        for (auto&& [key, value] : {
-                    std::pair{"project"s, "confy"s},
-                    {"version"s, "1"s},
-                    {"author"s, "Bodor Andras"s},
-                    {"license"s, "BSD 3-Clause"s},
+        for (auto&& data : {
+                    std::make_pair("project"s, "confy"s),
+                    std::make_pair("version"s, "1"s),
+                    std::make_pair("author"s, "Bodor Andras"s),
+                    std::make_pair("license"s, "BSD 3-Clause"s),
              }) {
+            auto&& key = data.first;
+            auto&& value = data.second;
             EXPECT_NO_THROW(std::ignore = cs.get<std::string_view>(key));
             EXPECT_EQ(cs.get<std::string>(key), value);
         }
@@ -393,7 +410,7 @@ test_config_set() {
 
         confy_set cs(file);
         EXPECT_EQ(cs.size(), std::size_t{35});
-        EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::invalid_argument&);
+        EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::out_of_range&);
     }
     END
 
@@ -407,7 +424,7 @@ test_config_set() {
         std::ifstream ifs(file);
         confy_set cs(ifs);
         EXPECT_EQ(cs.size(), std::size_t{35});
-        EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::invalid_argument&);
+        EXPECT_THROW(std::ignore = cs.get<std::string_view>("no such key"), const std::out_of_range&);
     }
     END
 }
