@@ -36,6 +36,12 @@
 #include "visitor.hpp"
 
 #ifdef CPORTA
+#  ifndef USE_CXX17
+#    define USE_CXX17
+#  endif
+#endif
+
+#ifdef USE_CXX17
 #  define cachable class
 #endif
 

@@ -34,20 +34,22 @@
  * \brief Provides tests cases for the user interaction functions
  */
 
-#include <exception>
 #ifdef CPORTA
+#  ifndef USE_CXX17
+#    define USE_CXX17
+#  endif
+#endif
+
+#ifdef USE_CXX17
 #  include <experimental/filesystem>
+#  include <experimental/string_view>
 #  define filesystem experimental::filesystem
+#  define string_view experimental::string_view
 #else
 #  include <filesystem>
+#  include <string_view>
 #endif
 #include <string>
-#ifndef CPORTA
-#  include <string_view>
-#else
-#  include <experimental/string_view>
-#  define string_view experimental::string_view
-#endif
 #include <type_traits>
 
 #include "bad_key.hpp"

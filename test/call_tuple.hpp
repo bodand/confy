@@ -32,6 +32,12 @@
 #ifndef CONFY_TYPE_ITERATION_HPP
 #define CONFY_TYPE_ITERATION_HPP
 
+#ifdef CPORTA
+#  ifndef USE_CXX17
+#    define USE_CXX17
+#  endif
+#endif
+
 #include <type_traits>
 
 /**
@@ -53,7 +59,7 @@ struct int_t {
     constexpr auto const static value = I;
 };
 
-#ifndef CPORTA
+#ifndef USE_CXX17
 /**
  * \brief Implementation function for call_tuple.
  *
@@ -101,7 +107,7 @@ struct call_tuple_impl<T, std::index_sequence<>> {
 template<class T>
 void
 call_tuple(const T& t) {
-#ifndef CPORTA
+#ifndef USE_CXX17
     call_tuple_impl(t, std::make_index_sequence<std::tuple_size_v<T>>());
 #else
     call_tuple_impl<T, std::make_index_sequence<std::tuple_size<T>::value>>::call(t);

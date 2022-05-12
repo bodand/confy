@@ -34,13 +34,19 @@
  * \brief Test functions for the bad_key class
  */
 
-#include <exception>
 #ifdef CPORTA
+#  ifndef USE_CXX17
+#    define USE_CXX17
+#  endif
+#endif
+
+#ifdef USE_CXX17
 #  include <experimental/filesystem>
 #  define filesystem experimental::filesystem
 #else
 #  include <filesystem>
 #endif
+#include <exception>
 #include <type_traits>
 
 #include "visitor.hpp"

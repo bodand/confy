@@ -40,15 +40,21 @@
 #ifndef CONFY_USER_MODES_HPP
 #define CONFY_USER_MODES_HPP
 
-#ifndef CPORTA
+#ifdef CPORTA
+#  ifndef USE_CXX17
+#    define USE_CXX17
+#  endif
+#endif
+
+#ifdef USE_CXX17
+#  include <experimental/filesystem>
+#  include <experimental/string_view>
+#  define string_view experimental::string_view
+#  define filesystem experimental::filesystem
+#else
 #  include <filesystem>
 #  include <span>
 #  include <string_view>
-#else
-#  include <experimental/string_view>
-#  define string_view experimental::string_view
-#  include <experimental/filesystem>
-#  define filesystem experimental::filesystem
 #endif
 
 /**
@@ -62,7 +68,7 @@
 int
 interactive_mode(const std::filesystem::path& cfg_file);
 
-#ifdef CPORTA
+#ifdef USE_CXX17
 using cli_keys_t = const std::vector<std::string_view>&;
 #else
 using cli_keys_t = std::span<std::string_view>;

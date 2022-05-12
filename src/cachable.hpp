@@ -41,7 +41,13 @@
 #ifndef CONFY_CACHABLE_HPP
 #define CONFY_CACHABLE_HPP
 
-#ifndef CPORTA
+#ifdef CPORTA
+#  ifndef USE_CXX17
+#    define USE_CXX17
+#  endif
+#endif
+
+#ifndef USE_CXX17
 #  include <concepts>
 #endif
 #include <memory>
@@ -50,7 +56,7 @@
 
 #include "cache_factory.hpp"
 
-#ifndef CPORTA
+#ifndef USE_CXX17
 
 /**
  * \brief The cachable concept
@@ -90,7 +96,7 @@ class jporta_cachable {
            test_impl(std::nullptr_t) -> decltype(std::declval<C>().construct(std::declval<const std::string&>()), True{});
     template<class>
     static False&
-    test_impl(...)  ;
+    test_impl(...);
 
 public:
     constexpr static bool value = sizeof(typename std::decay<decltype(test_impl<T>(nullptr))>::type) == sizeof(True);

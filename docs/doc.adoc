@@ -759,8 +759,7 @@ Adott egy érvényes teszt fájl:
 
 === config_set<parser P>
 
-Az adott teszt fájlokkal végrehajtott tesztek egy explicit készített `std::ifstream` objektum átadásával is lefutnak,
-ugyanazokkal a tesztekkel, nyilvánvalóan a fájl név jelenléte helyett az `<unkown file>` szubsztringet ellenőrizzük.
+Az adott teszt fájlokkal végrehajtott tesztek egy explicit készített `std::ifstream` objektum átadásával is lefutnak, ugyanazokkal a tesztekkel, nyilvánvalóan a fájl név jelenléte helyett az `<unkown file>` szubsztringet ellenőrizzük.
 
 . konstruktor dob `invalid_argument`-et nem létező fájl esetén
 .. a dobott érték `what()` tagfüggvénye tartalmazza a nem létező fájl nevét
@@ -1038,6 +1037,75 @@ Ezek a tesztek az összes beépített cache típusra lefutnak.
 
 NOTE: R3 javítás: Eredeti első teszt eset törölve, nem ellenőrizhető az erős típushelyesség megtöréséhez szükséges függvények biztosítása nélkül.
 Ezt nem szeretnénk sose támogatni, így a tesztet töröljük.
+
+== Fordítás
+
+=== {cxx} verziószám
+
+A program lefordítható {cxx}17 illetve {cxx}20 verziójú szabványokon.
+A natív implementáció nyelve {cxx}20, a {cxx}17 csak egy JPorta támogatottság eléréséért lett implementálva, így ez a verzió képes a JPorta kezdetleges {cxx}17 verziójával lefordulni.
+
+Amennyiben friss {cxx} fordítóval fordítanánk a kódot, a {cxx}20 mód beállítása (GCC-n `-std=c++20` kapcsolóval) mellett nem kell tenni semmit, a kód szépen le kell forduljon.
+
+Azonban, ha egy régebbi rendszeren dolgozunk, amire nem elérhető friss fordítóprogram, akkor a JPorta kompatibilitás módban fordítandó a program.
+Ehhez, a feljebb tárgyaltaknak megfelelően egy kezdetleges {cxx}17 fordító környezet szükséges: a `string_view`, `optional`, `filesystem::path` elemeket például az `std::experimental` névtérben keresi a rendszer a végleges `std` névtérbeli helyük helyett.
+
+NOTE: GCC által biztosított `libstdc++` implementáció visszafele kompatibilis, így már a végleges szabványos névtérbe kerülésük után is támogatja a kísérleti neveiket, így nem származik probléma újabb verziók használatából.
+
+Ebben az esetben két dolgot kell végrehajtani: a `-std=c++17` opció, vagy fordítónk ekvivalens kapcsolójának, használatával be kell állítani a {cxx}17 verzió használatát, és definiálni a `CPORTA` makrót minden fordítási parancsban.
+Ez utóbbi kapcsolja be a JPorta kompatibilitás üzemmódot és teszi lehetővé a kódnak a {cxx}17 verzióval való fordítását.
+
+NOTE: Lehetséges, hogy az `std::experimental::filesystem` névtérhez kapcsolódó entitások nem a fő {cxx} könyvtárban vannak implementálva, hanem az eredetileg ideiglenes{wj}footnote:[Egyértelműen támogatottnak kell maradniuk, mert különben visszafele kompatibilitást törnének vele.] segédkönyvtárban.
+GCC `libstd{cxx}` és LLVM `lib{cxx}` szabványos könyvtárai ezt így implementálják, így egy extra kapcsoló használatos: GCC-n `-lstdc++fs`.
+
+=== Tesztesetek
+
+Alapból a tesztesetek kerülnek fordításra.
+
+Amennyiben a rendes főprogramot szeretnénk lefordítani, akkor definiálandó a `NO_CONFY_TESTING` makró minden fordítási egység fordításakor.
+Ebben az esetben a teszt program helyett az aktuálisan használható program kerül lefordításra.
+
+== Felhasználói dokumentáció
+
+=== A program használata
+
+A programot két módban lehetséges használni: interaktív és parancssoros üzemmódban.
+
+Parancssoros üzemmód esetén a program parancssorból meghívása esetén paraméterenként átadandóak a használandó konfigurációs fájl, illetve a lekérdezendő kulcsok, ezek értékei a megadott sorrendben soronként kerülnek megjelenítésre.
+
+Interaktív ütemmódba lép a program ha maximálisan egy darab paramétert kapott: ha ez egy akkor az a használandó fájl neve.
+Amennyiben nem kerül fájl megadásra, interaktívan megkérdezi a felhasználót.
+A fájl megadása után, egyesével lehetséges lekérdezni kulcsokat, melyekre azonnal az értékükkel válaszol a program.
+Üres kulcs esetén kilép a program.
+
+=== Konfigurációs fájl formátum
+
+A fájl kulcs-érték hozzárendeléseket tárol.
+
+A kulcsok szigorúan a sor első oszlopában kezdődnek, és egyszerű latin alfanumerikus karakterek sorozata, kivéve az első karakter, amely nem lehet számjegy.
+Ezt szóköz nélkül követi egy egyenlőségjel és a tárolandó érték, szintén szóköz nélkül.
+
+Az érték háromfajta lehet:
+
+. nyers szó: ilyenkor csak alfanumerikus kulcsokat tártalmazhat az érték
+. szimpla idézőjeles szöveg: egyszeres idézőjelek között bármilyen karaktert tartalmazható szöveg, kötelezően szimpla idézőjellel zárva a sort
+. dupla idézőjeles szöveg: azonos a szimpla idézőjeles szöveggel, dupla idézőjelekkel
+
+WARNING: Ahol explicit nem megengedett, a szóköz szintaktikai hibának számít, mint a Bourne shell alapú parancssorokban.
+
+Lehetséges kommentek használata, ezek az első oszlopbeli kettőskereszt karaktert használják.
+
+Esetleges üres (teljesen, egy space már szintaktikai hiba) sorok átugrásra kerülnek.
+
+== Megvalósítás
+
+Az eredeti megvalósítás a tervnek megfelelően történt.
+
+A JPorta kompatibilitás mód pár, nem túl kecses, trükk bevetését igényelte:
+
+* A `filesystem`, `string_view`, `optional` szabványos könyvtári entitások makróként fölüldefiniálásra kerültek, melyek JPortán fordítás közben az `std::experimental` névtérbeli megfelelőjükre kerülnek kibontásra.
+* A, már a tervben is definiált, `parser` és `cachable` koncepciók template paraméterként használt szükítő feltételekben `class`-ra, míg egyéb logikai kontextusban való használatukkor a megfelelő SFINAE-t használó régi {cxx}-ban is megvalósítható megoldással kerültek pótlásra.
+* A fordításkor kiértékelődő `if constexpr` kifejezések, megfelelő SFINAE-t használó segédstrukturás megvalósításra lettek cserélve.
 
 include::{doxydoc}[]
 

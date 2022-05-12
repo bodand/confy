@@ -39,23 +39,28 @@
 #ifndef CONFY_PARSER_HPP
 #define CONFY_PARSER_HPP
 
-#ifndef CPORTA
-#  include <concepts>
+#ifdef CPORTA
+#  ifndef USE_CXX17
+#    define USE_CXX17
+#  endif
 #endif
-#include <istream>
-#include <string>
-#ifndef CPORTA
-#  include <optional>
-#  include <string_view>
-#else
+
+#ifdef USE_CXX17
 #  include <experimental/optional>
 #  include <experimental/string_view>
 #  define string_view experimental::string_view
 #  define optional experimental::optional
+#else
+#  include <concepts>
+#  include <optional>
+#  include <string_view>
 #endif
+
+#include <istream>
+#include <string>
 #include <type_traits>
 
-#ifndef CPORTA
+#ifndef USE_CXX17
 
 /**
  * \brief The parser concept

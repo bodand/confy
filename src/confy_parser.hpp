@@ -41,22 +41,25 @@
 #define CONFY_CONFY_PARSER_HPP
 
 #ifdef CPORTA
-#  include <experimental/filesystem>
-#  define filesystem experimental::filesystem
-#else
-#  include <filesystem>
+#  ifndef USE_CXX17
+#    define USE_CXX17
+#  endif
 #endif
-#include <string>
-#ifndef CPORTA
-#  include <optional>
-#  include <string_view>
-#else
+
+#ifdef USE_CXX17
+#  include <experimental/filesystem>
 #  include <experimental/optional>
 #  include <experimental/string_view>
+#  define filesystem experimental::filesystem
 #  define string_view experimental::string_view
 #  define optional experimental::optional
 #  define nullopt experimental::nullopt
+#else
+#  include <filesystem>
+#  include <optional>
+#  include <string_view>
 #endif
+#include <string>
 #include <utility>
 
 /**

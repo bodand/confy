@@ -42,15 +42,18 @@
 #ifndef CONFY_CONFIG_HPP
 #define CONFY_CONFIG_HPP
 
+#if defined(CPORTA) && !defined(USE_CXX17)
+#  define USE_CXX17
+#endif
+
 #include <memory>
 #include <stdexcept>
 #include <string>
-#ifndef CPORTA
-#  include <string_view>
-#else
+#ifdef USE_CXX17
 #  include <experimental/string_view>
-
 #  define string_view experimental::string_view
+#else
+#  include <string_view>
 #endif
 
 #include "cache_factory.hpp"

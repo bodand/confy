@@ -34,13 +34,19 @@
  * \brief Tests the cache implementations
  */
 
-#include <exception>
 #ifdef CPORTA
+#  ifndef USE_CXX17
+#    define USE_CXX17
+#  endif
+#endif
+
+#ifdef USE_CXX17
 #  include <experimental/filesystem>
 #  define filesystem experimental::filesystem
 #else
 #  include <filesystem>
 #endif
+#include <exception>
 #include <type_traits>
 
 #include "caches.hpp"
@@ -51,7 +57,7 @@ using namespace std::literals;
 #include "gtest_lite.h"
 
 namespace {
-#ifndef CPORTA
+#ifndef USE_CXX17
     template<class T>
     concept const_get_value_ptr = requires(const T t) {
                                       { t.get_value_ptr() };
@@ -71,7 +77,7 @@ namespace {
             {
                 EXPECT_TRUE((std::is_constructible<C, T&&>::value));
                 EXPECT_TRUE((std::is_constructible<C, decltype(std::move(std::declval<T>()))>::value));
-#ifndef CPORTA
+#ifndef USE_CXX17
                 EXPECT_TRUE(const_get_value_ptr<C>);
 #endif
                 EXPECT_TRUE(std::is_const<std::remove_pointer_t<decltype(std::declval<C>().get_value_ptr())>>::value);

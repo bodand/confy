@@ -34,13 +34,19 @@
  * \brief Implements the tests for the caching cache_factory implementations
  */
 
-#include <string>
-#ifndef CPORTA
-#  include <string_view>
-#else
+#ifdef CPORTA
+#  ifndef USE_CXX17
+#    define USE_CXX17
+#  endif
+#endif
+
+#ifdef USE_CXX17
 #  include <experimental/string_view>
 #  define string_view experimental::string_view
+#else
+#  include <string_view>
 #endif
+#include <string>
 #include <type_traits>
 
 #include "cache_factory.hpp"

@@ -43,6 +43,12 @@
 #define CONFY_CONFIG_SET_HPP
 
 #ifdef CPORTA
+#  ifndef USE_CXX17
+#    define USE_CXX17
+#  endif
+#endif
+
+#ifdef USE_CXX17
 #  include <experimental/filesystem>
 #  include <experimental/string_view>
 #  define string_view experimental::string_view
@@ -63,7 +69,7 @@
 #include "config.hpp"
 #include "parser.hpp"
 
-#ifdef CPORTA
+#ifdef USE_CXX17
 #  define parser class
 #endif
 
@@ -178,7 +184,7 @@ private:
         std::size_t middle;
         std::size_t end = vec.size();
         while (begin != end) {
-#ifndef CPORTA
+#ifndef USE_CXX17
             middle = std::midpoint(begin, end);
 #else
             middle = (end + begin) / 2;

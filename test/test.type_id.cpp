@@ -39,7 +39,13 @@
 #include "gtest_lite.h"
 #include "type_id.hpp"
 
-#ifndef CPORTA
+#ifdef CPORTA
+#  ifndef USE_CXX17
+#    define USE_CXX17
+#  endif
+#endif
+
+#ifndef USE_CXX17
 namespace {
     template<class T>
     concept const_equality_comparable = requires(const T t) {
@@ -67,7 +73,7 @@ test_type_id() {
 
     // static checks
     TEST(type_id, static_checks) {
-#ifndef CPORTA
+#ifndef USE_CXX17
         EXPECT_TRUE(const_equality_comparable<type_id>);
         EXPECT_TRUE(const_inequality_comparable<type_id>);
 #endif

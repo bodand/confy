@@ -37,10 +37,13 @@
  */
 
 #ifdef CPORTA
-#  define CONFY_TESTING
+#  ifndef USE_CXX17
+#    define USE_CXX17
+#  endif
+#  undef NO_CONFY_TESTING
 #endif
 
-#ifdef CONFY_TESTING
+#ifndef NO_CONFY_TESTING
 #  define test_main main
 #endif
 

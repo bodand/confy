@@ -34,13 +34,19 @@
  * \brief Implements the tests for the non-caching cache_factory implementations
  */
 
-#include <string>
-#ifndef CPORTA
-#  include <string_view>
-#else
+#ifdef CPORTA
+#  ifndef USE_CXX17
+#    define USE_CXX17
+#  endif
+#endif
+
+#ifdef USE_CXX17
 #  include <experimental/string_view>
 #  define string_view experimental::string_view
+#else
+#  include <string_view>
 #endif
+#include <string>
 
 #include "cache_factory.hpp"
 
@@ -50,7 +56,7 @@ using namespace std::literals;
 #include "gtest_lite.h"
 
 namespace {
-#ifndef CPORTA
+#ifndef USE_CXX17
     template<class T>
     concept has_make = requires(T t) {
                            { t.make(std::string("")) };
@@ -70,7 +76,7 @@ namespace {
 
         void
         operator()() const {
-#ifndef CPORTA
+#ifndef USE_CXX17
             gtest_lite::test.begin(("uncached_cachefactory.static_checks#" + std::to_string(I::value)).c_str());
             EXPECT_TRUE(has_make<cache_factory<T>>);
             EXPECT_TRUE(const_makeable<cache_factory<T>>);

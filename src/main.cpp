@@ -35,20 +35,23 @@
  */
 
 #ifdef CPORTA
-#  define CONFY_TESTING
+#  ifndef USE_CXX17
+#    define USE_CXX17
+#  endif
+#  undef NO_CONFY_TESTING
 #endif
 
-#ifdef CONFY_TESTING
+#ifndef NO_CONFY_TESTING
 #  define main not_main_anymore
 #endif
 
 #include <exception>
 #include <iostream>
-#ifndef CPORTA
-#  include <string_view>
-#else
+#ifdef USE_CXX17
 #  include <experimental/string_view>
 #  define string_view experimental::string_view
+#else
+#  include <string_view>
 #endif
 #include <vector>
 
@@ -58,7 +61,7 @@ int
 main(int argc, char** argv) try {
     if (argc >= 3) {
         std::vector<std::string_view> args(argv + 2,
-                                           argv + argc - 2);
+                                           argv + argc);
         return cli_mode(argv[1], args);
     }
 

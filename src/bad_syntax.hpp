@@ -39,13 +39,19 @@
 #ifndef CONFY_BAD_SYNTAX_HPP
 #define CONFY_BAD_SYNTAX_HPP
 
-#include <exception>
-#ifndef CPORTA
-#  include <filesystem>
-#else
+#ifdef CPORTA
+#  ifndef USE_CXX17
+#    define USE_CXX17
+#  endif
+#endif
+
+#ifdef USE_CXX17
 #  include <experimental/filesystem>
 #  define filesystem experimental::filesystem
+#else
+#  include <filesystem>
 #endif
+#include <exception>
 #include <string>
 
 /**

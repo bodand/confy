@@ -42,11 +42,11 @@
 #include <limits>
 #include <memory>
 #include <string>
-#ifndef CPORTA
-#  include <string_view>
-#else
+#ifdef USE_CXX17
 #  include <experimental/string_view>
 #  define string_view experimental::string_view
+#else
+#  include <string_view>
 #endif
 
 #include "caches.hpp"

@@ -42,6 +42,12 @@
 #ifndef CONFY_VISITOR_HPP
 #define CONFY_VISITOR_HPP
 
+#ifdef CPORTA
+#  ifndef USE_CXX17
+#    define USE_CXX17
+#  endif
+#endif
+
 #include "type_id.hpp"
 
 /**
@@ -175,7 +181,7 @@ protected:
         return true;
     }
 
-#ifndef CPORTA
+#ifndef USE_CXX17
     /**
      * \brief Implemented typeless visitor internal.
      *

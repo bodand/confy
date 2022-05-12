@@ -34,14 +34,19 @@
  * \brief Tests for the config_set class
  */
 
+#ifdef CPORTA
+#  ifndef USE_CXX17
+#    define USE_CXX17
+#  endif
+#endif
 
-#include <string>
-#ifndef CPORTA
-#  include <string_view>
-#else
+#ifdef USE_CXX17
 #  include <experimental/string_view>
 #  define string_view experimental::string_view
+#else
+#  include <string_view>
 #endif
+#include <string>
 #include <type_traits>
 
 #include "bad_key.hpp"
